@@ -1,7 +1,7 @@
 {
-  "name": "Surreal Pomodoro",
-  "short_name": "Pomodoro",
-  "description": "Minimalist PWA Pomodoro Timer",
+  "name": "Surreal Tomato",
+  "short_name": "Tomato",
+  "description": "Minimalist PWA Tomato Timer",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050505",
