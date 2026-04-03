@@ -554,3 +554,83 @@ header, .controls, .bottom-sheet, .modal, .glass-btn, .icon-btn {
     margin-bottom: 0;
   }
 }
+
+/* ==========================================
+   AI TASK SLICING SECTION
+   ========================================== */
+.ai-slice-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-key-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-color);
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.04em;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.ai-key-input:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.ai-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  background: linear-gradient(135deg, rgba(120, 80, 255, 0.15), rgba(0, 200, 255, 0.1));
+  border: 1px solid rgba(120, 80, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.ai-btn:not(:disabled):hover {
+  background: linear-gradient(135deg, rgba(120, 80, 255, 0.25), rgba(0, 200, 255, 0.18));
+  border-color: rgba(120, 80, 255, 0.4);
+}
+
+.ai-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ai-btn.loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  padding: 0.8rem 1.5rem;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: none;
+}
+
+.toast.error {
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.toast.success {
+  border-color: rgba(52, 199, 89, 0.3);
+}
