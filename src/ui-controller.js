@@ -2,9 +2,10 @@
 // UI CONTROLLER — DOM, GSAP, Modals, Sheets
 // ==========================================
 import gsap from 'gsap';
-import { appState, t, saveTasks, saveLang, getActiveTask } from './state.js';
+import { appState, t, saveTasks, saveLang, saveApiKey, getActiveTask } from './state.js';
 import { formatTime, switchMode, startTimer, pauseTimer, stopTimer, setTask } from './timer.js';
 import { updateTomatoColors, setModeParams } from './three-engine.js';
+import { sliceTask } from './ai-service.js';
 
 // ==========================================
 // DOM REFERENCES
@@ -340,6 +341,61 @@ export function bindEvents() {
     applyLanguage(newLang);
   };
 
+  // --- AI Task Slicing ---
+  const geminiKeyInput = document.getElementById('gemini-api-key-input');
+  const aiSliceBtn = document.getElementById('ai-slice-btn');
+
+  // Load saved API key
+  if (appState.prefs.geminiApiKey) {
+    geminiKeyInput.value = appState.prefs.geminiApiKey;
+    aiSliceBtn.disabled = false;
+  }
+
+  // Save API key on input
+  geminiKeyInput.addEventListener('input', () => {
+    const key = geminiKeyInput.value.trim();
+    appState.prefs.geminiApiKey = key;
+    saveApiKey();
+    aiSliceBtn.disabled = !key;
+  });
+
+  // AI Slice button
+  aiSliceBtn.addEventListener('click', async () => {
+    const activeTask = getActiveTask();
+    if (!activeTask || !appState.prefs.geminiApiKey) return;
+
+    const btnLabel = aiSliceBtn.querySelector('[data-i18n]');
+    const originalText = btnLabel.textContent;
+    btnLabel.textContent = t('aiSlicing');
+    aiSliceBtn.classList.add('loading');
+
+    try {
+      const subTasks = await sliceTask(activeTask.title);
+
+      subTasks.forEach(sub => {
+        const id = Date.now().toString() + Math.random().toString(36).slice(2, 6);
+        appState.tasks.push({
+          id,
+          title: sub.title,
+          focusMinutes: sub.focusMinutes,
+          breakMinutes: 5,
+          themeColor1: activeTask.themeColor1,
+          themeColor2: activeTask.themeColor2,
+          glassColor: activeTask.glassColor || '#ff3b30'
+        });
+      });
+
+      saveTasks();
+      renderSheetTasks();
+      showToast(`${subTasks.length} ${appState.prefs.lang === 'ko' ? '개의 하위 작업이 생성되었습니다' : 'sub-tasks created'}`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btnLabel.textContent = originalText;
+      aiSliceBtn.classList.remove('loading');
+    }
+  });
+
   // GSAP Spring on all glass buttons
   document.querySelectorAll('.glass-btn').forEach(attachSpring);
 
@@ -375,6 +431,30 @@ function handleTimerEnd() {
   btnFinishSession.onclick = () => { closeTransitionModal(); switchMode('idle'); };
 
   openTransitionModal();
+}
+
+// ==========================================
+// TOAST NOTIFICATIONS
+// ==========================================
+function showToast(message, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  gsap.fromTo(toast,
+    { opacity: 0, y: 100 },
+    { opacity: 1, y: 0, duration: 0.4, ease: "back.out(1.2)" }
+  );
+
+  gsap.to(toast, {
+    opacity: 0, y: 30, duration: 0.3, delay: 3,
+    ease: "power2.in",
+    onComplete: () => toast.remove()
+  });
 }
 
 // ==========================================

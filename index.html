@@ -68,6 +68,18 @@
             <!-- Rendered via JS -->
           </ul>
           <button id="add-new-task-btn" class="glass-btn full-width" data-i18n="newTask">+ 새 작업</button>
+
+          <!-- AI Task Slicing Section -->
+          <div class="ai-slice-section">
+            <div class="setting-group">
+              <label data-i18n="apiKeyLabel">Gemini API Key</label>
+              <input type="password" id="gemini-api-key-input" class="ai-key-input" data-i18n-placeholder="apiKeyPlaceholder" placeholder="AIza..." />
+            </div>
+            <button id="ai-slice-btn" class="glass-btn full-width ai-btn" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+              <span data-i18n="aiSlice">AI로 분해하기</span>
+            </button>
+          </div>
         </div>
 
         <div id="task-form-view" style="display:none;">
