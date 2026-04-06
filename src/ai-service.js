@@ -3,7 +3,7 @@
 // ==========================================
 import { appState, t } from './state.js';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 /**
  * Slice a large task into 3-4 smaller sub-tasks using Gemini AI.
@@ -11,9 +11,9 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
  * @returns {Promise<Array<{title: string, focusMinutes: number}>>}
  */
 export async function sliceTask(taskTitle) {
-  const apiKey = appState.prefs.geminiApiKey;
-  if (!apiKey) {
-    throw new Error(t('aiKeyNeeded'));
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_API_KEY') {
+    throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
   }
 
   const prompt = `You are a productivity assistant. Break down this task into 3-4 smaller, actionable sub-tasks that can each be completed in a single 25-minute Pomodoro focus session.

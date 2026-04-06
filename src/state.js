@@ -91,7 +91,6 @@ export function t(key) {
 // --- Storage Keys ---
 const LOCAL_STORAGE_KEY = 'tomato_os_tasks';
 const LANG_STORAGE_KEY = 'tomato_lang';
-const API_KEY_STORAGE_KEY = 'tomato_gemini_key';
 
 // --- Default Tasks ---
 const DEFAULT_TASKS = [
@@ -111,8 +110,7 @@ export const appState = {
     endTime: 0
   },
   prefs: {
-    lang: localStorage.getItem(LANG_STORAGE_KEY) || 'ko',
-    geminiApiKey: localStorage.getItem(API_KEY_STORAGE_KEY) || ''
+    lang: localStorage.getItem(LANG_STORAGE_KEY) || 'ko'
   }
 };
 
@@ -123,10 +121,6 @@ export function saveTasks() {
 
 export function saveLang() {
   localStorage.setItem(LANG_STORAGE_KEY, appState.prefs.lang);
-}
-
-export function saveApiKey() {
-  localStorage.setItem(API_KEY_STORAGE_KEY, appState.prefs.geminiApiKey);
 }
 
 // --- Active Task Helper ---

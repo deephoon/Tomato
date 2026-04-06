@@ -8,6 +8,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Tomato — Focus OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/style.css" />
     <script>
       if ('serviceWorker' in navigator) {
@@ -19,13 +22,27 @@
     <!-- three.js and gsap resolved via npm/node_modules -->
   </head>
   <body>
-    <!-- Layer 0: Three.js Canvas -->
-    <canvas id="three-canvas"></canvas>
+    <!-- Layer 0: Brutalist 2D Tomato Background -->
+    <div id="brutalist-bg">
+      <div class="brutalist-tomato">
+        <div class="stem"></div>
+      </div>
+    </div>
     
     <!-- Layer 1: Main HUD -->
     <div id="app">
-      <header class="top-bar">
-        <h1 id="current-task-title" class="task-title" data-i18n="selectTask">작업 선택</h1>
+      <header class="hud-header">
+        <div class="hud-top-left">
+          <div class="brand">TOMATO v2.6</div>
+          <div id="hud-status" class="status-cycle" data-i18n="workCycle">WORK CYCLE</div>
+          <div id="current-task-title" class="task-title" data-i18n="selectTask">작업 선택</div>
+        </div>
+        <div class="hud-top-right">
+          <button id="tasks-btn" class="glass-btn hud-menu" data-i18n="tasks">TASKS</button>
+          <button id="lang-toggle-btn" class="glass-btn hud-menu">
+            <span id="lang-label">EN</span>
+          </button>
+        </div>
       </header>
 
       <main class="timer-container">
@@ -34,20 +51,13 @@
         </div>
       </main>
 
-      <footer class="controls">
-        <button id="tasks-btn" class="glass-btn icon-pill" aria-label="Tasks">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-          <span data-i18n="tasks">작업 목록</span>
+      <footer class="hud-footer controls">
+        <button id="play-pause-btn" class="glass-btn primary-box" aria-label="Play/Pause">
+          <span id="play-icon" data-i18n="start">START</span>
+          <span id="pause-icon" class="hidden" data-i18n="pause">PAUSE</span>
         </button>
-        <button id="play-pause-btn" class="glass-btn primary-circle" aria-label="Play/Pause">
-          <svg id="play-icon" viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
-          <svg id="pause-icon" class="hidden" viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-        </button>
-        <button id="stop-btn" class="glass-btn icon-pill" aria-label="Stop" style="display: none;">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>
-        </button>
-        <button id="lang-toggle-btn" class="glass-btn icon-pill" aria-label="Language">
-          <span id="lang-label">EN</span>
+        <button id="stop-btn" class="glass-btn secondary-box" aria-label="Stop" style="display: none;">
+          <span data-i18n="reset">RESET</span>
         </button>
       </footer>
     </div>
@@ -71,11 +81,7 @@
 
           <!-- AI Task Slicing Section -->
           <div class="ai-slice-section">
-            <div class="setting-group">
-              <label data-i18n="apiKeyLabel">Gemini API Key</label>
-              <input type="password" id="gemini-api-key-input" class="ai-key-input" data-i18n-placeholder="apiKeyPlaceholder" placeholder="AIza..." />
-            </div>
-            <button id="ai-slice-btn" class="glass-btn full-width ai-btn" disabled>
+            <button id="ai-slice-btn" class="glass-btn full-width ai-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
               <span data-i18n="aiSlice">AI로 분해하기</span>
             </button>

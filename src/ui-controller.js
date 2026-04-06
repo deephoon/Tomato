@@ -2,15 +2,15 @@
 // UI CONTROLLER — DOM, GSAP, Modals, Sheets
 // ==========================================
 import gsap from 'gsap';
-import { appState, t, saveTasks, saveLang, saveApiKey, getActiveTask } from './state.js';
+import { appState, t, saveTasks, saveLang, getActiveTask } from './state.js';
 import { formatTime, switchMode, startTimer, pauseTimer, stopTimer, setTask } from './timer.js';
-import { updateTomatoColors, setModeParams } from './three-engine.js';
 import { sliceTask } from './ai-service.js';
 
 // ==========================================
 // DOM REFERENCES
 // ==========================================
 const elTaskTitle = document.getElementById('current-task-title');
+const elHudStatus = document.getElementById('hud-status');
 const elTimeLeft = document.getElementById('time-left');
 const btnTasks = document.getElementById('tasks-btn');
 const btnPlayPause = document.getElementById('play-pause-btn');
@@ -68,15 +68,21 @@ export function updateHUD() {
   if (!task) return;
 
   if (appState.session.mode === 'idle' || appState.session.mode === 'focus') {
-    elTaskTitle.textContent = appState.session.mode === 'idle' ? `[ ${task.title} ]` : task.title;
+    elHudStatus.textContent = appState.session.mode === 'idle' ? 'STANDBY MODE' : 'FOCUS SESSION';
+    elTaskTitle.textContent = appState.session.mode === 'idle' ? `[ ${task.title} ]` : `TASK: ${task.title}`;
     elTimeLeft.textContent = formatTime(appState.session.remainingSeconds);
-    updateTomatoColors(task.themeColor1, task.themeColor2, task.glassColor);
-    setModeParams(appState.session.mode);
+    document.documentElement.style.setProperty('--tomato-color', task.glassColor || '#FF3B30');
+    document.documentElement.style.setProperty('--tomato-glitch1', task.themeColor1 || '#FF007F');
+    document.documentElement.style.setProperty('--tomato-glitch2', task.themeColor2 || '#7000FF');
+    document.body.className = appState.session.mode;
   } else if (appState.session.mode === 'break') {
+    elHudStatus.textContent = 'REST BREAK';
     elTaskTitle.textContent = t('restBreak');
     elTimeLeft.textContent = formatTime(appState.session.remainingSeconds);
-    updateTomatoColors('#333355', '#221133', '#111122');
-    setModeParams('break');
+    document.documentElement.style.setProperty('--tomato-color', '#333355');
+    document.documentElement.style.setProperty('--tomato-glitch1', '#221133');
+    document.documentElement.style.setProperty('--tomato-glitch2', '#111122');
+    document.body.className = 'break';
   }
 
   btnStop.style.display = appState.session.mode === 'idle' ? 'none' : 'flex';
@@ -269,6 +275,11 @@ function applyLanguage(newLang) {
 export function bindEvents() {
   // Play/Pause
   btnPlayPause.onclick = () => {
+    // Request Notification permission on first interaction
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     if (appState.session.isRunning) {
       pauseTimer();
       openInterruptionModal();
@@ -342,27 +353,12 @@ export function bindEvents() {
   };
 
   // --- AI Task Slicing ---
-  const geminiKeyInput = document.getElementById('gemini-api-key-input');
   const aiSliceBtn = document.getElementById('ai-slice-btn');
-
-  // Load saved API key
-  if (appState.prefs.geminiApiKey) {
-    geminiKeyInput.value = appState.prefs.geminiApiKey;
-    aiSliceBtn.disabled = false;
-  }
-
-  // Save API key on input
-  geminiKeyInput.addEventListener('input', () => {
-    const key = geminiKeyInput.value.trim();
-    appState.prefs.geminiApiKey = key;
-    saveApiKey();
-    aiSliceBtn.disabled = !key;
-  });
 
   // AI Slice button
   aiSliceBtn.addEventListener('click', async () => {
     const activeTask = getActiveTask();
-    if (!activeTask || !appState.prefs.geminiApiKey) return;
+    if (!activeTask) return;
 
     const btnLabel = aiSliceBtn.querySelector('[data-i18n]');
     const originalText = btnLabel.textContent;
@@ -411,6 +407,12 @@ export function bindEvents() {
 // ==========================================
 function handleTimerEnd() {
   if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const title = appState.session.mode === 'focus' ? t('timesUp') : t('breakOver');
+    const body = appState.session.mode === 'focus' ? t('greatSession') : t('readyAgain');
+    new Notification(title, { body });
+  }
 
   if (appState.session.mode === 'focus') {
     transitionTitle.textContent = t('timesUp');

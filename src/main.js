@@ -2,7 +2,6 @@
 // MAIN.JS — App Orchestrator (Entry Point)
 // ==========================================
 import { appState } from './state.js';
-import { startRenderLoop } from './three-engine.js';
 import { switchMode } from './timer.js';
 import { updateHUD, bindEvents, applyInitialLanguage, renderSheetTasks } from './ui-controller.js';
 
@@ -21,9 +20,6 @@ function init() {
 
   // Initial HUD render
   updateHUD();
-
-  // Start Three.js render loop
-  startRenderLoop();
 }
 
 init();
