@@ -65,7 +65,24 @@ export const dict = {
     
     // Prompts
     confirmDelete: "DECOMMISSION this ritual signal?",
-    untitled: "UNTITLED"
+    untitled: "UNTITLED",
+
+    // V9 AI Planner & Vault
+    aiReplan: "[ REPLAN WITH AI ]",
+    aiPromptTitle: "WHAT IS THE PRIMARY TARGET?",
+    aiPromptDesc: "Enter your objective. The system will curate your focus flow.",
+    aiInputPlaceholder: "e.g., Deep System Architecture Design",
+    btnCurate: "[ CURATE FLOW ]",
+    aiThinking: "CURATING TONIGHT'S FLOW...",
+    btnApplyPlan: "[ APPLY PLAN ]",
+    btnRegenerate: "[ REGENERATE ]",
+    unscheduledTasks: "UNSCHEDULED TASKS",
+    memoryVault: "RITUAL MEMORY VAULT",
+    vaultReturn: "[ RETURN TO ARCHIVE ]",
+    linkedTask: "LINKED TASK",
+    sequence: "SEQUENCE",
+    statusText: "STATUS",
+    systemNote: "SYSTEM NOTE"
   },
   ko: {
     navHOME: '[ 홈 ]',
@@ -124,6 +141,23 @@ export const dict = {
     notifRestDoneBody: "다음 신호를 포착할 준비가 되었습니다.",
     
     confirmDelete: "이 리추얼 신호를 [ 영구 폐기 ] 하시겠습니까?",
-    untitled: "명칭 미지정 (UNTITLED)"
+    untitled: "명칭 미지정 (UNTITLED)",
+
+    // V9 AI Planner & Vault
+    aiReplan: "[ AI 흐름 재설계 ]",
+    aiPromptTitle: "오늘의 주요 목표가 무엇입니까?",
+    aiPromptDesc: "목표를 입력하면 시스템이 포커스 흐름을 큐레이션합니다.",
+    aiInputPlaceholder: "예: 딥 시스템 아키텍처 다큐먼트 초안 작성",
+    btnCurate: "[ 흐름 큐레이트 ]",
+    aiThinking: "오늘 밤의 흐름을 큐레이팅 중입니다...",
+    btnApplyPlan: "[ 계획 적용 ]",
+    btnRegenerate: "[ 큐레이션 재생성 ]",
+    unscheduledTasks: "미배정된 작업",
+    memoryVault: "리추얼 메모리 보관소",
+    vaultReturn: "[ 아카이브로 복귀 ]",
+    linkedTask: "연결된 작업",
+    sequence: "진행 순서",
+    statusText: "진행 상태",
+    systemNote: "시스템 기록"
   }
 };

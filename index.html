@@ -65,23 +65,44 @@
       </div>
     </section>
 
-    <!-- 4. PLANNER (CALENDAR VIEW) -->
+    <!-- 4. PLANNER (TWO-PANE VIEW) -->
     <section id="view-calendar" class="view-layer hidden">
-      <div class="calendar-container">
-        <div class="calendar-header">
-          <div class="interactable cal-nav-btn" id="cal-prev">[ < ]</div>
-          <h2 class="section-title cal-title" id="cal-month-title">2026. 04</h2>
-          <div class="interactable cal-nav-btn" id="cal-next">[ > ]</div>
+      <div class="planner-split">
+        <!-- LEFT PANE: CALENDAR -->
+        <div class="planner-pane left-pane">
+          <div class="calendar-container">
+            <div class="calendar-header">
+              <div class="interactable cal-nav-btn" id="cal-prev">[ < ]</div>
+              <h2 class="section-title cal-title" id="cal-month-title">2026. 04</h2>
+              <div class="interactable cal-nav-btn" id="cal-next">[ > ]</div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+              <div class="cal-day-header">SUN</div>
+              <div class="cal-day-header">MON</div>
+              <div class="cal-day-header">TUE</div>
+              <div class="cal-day-header">WED</div>
+              <div class="cal-day-header">THU</div>
+              <div class="cal-day-header">FRI</div>
+              <div class="cal-day-header">SAT</div>
+              <!-- Dynamic cells here -->
+            </div>
+          </div>
         </div>
-        <div class="calendar-grid" id="calendar-grid">
-          <div class="cal-day-header">SUN</div>
-          <div class="cal-day-header">MON</div>
-          <div class="cal-day-header">TUE</div>
-          <div class="cal-day-header">WED</div>
-          <div class="cal-day-header">THU</div>
-          <div class="cal-day-header">FRI</div>
-          <div class="cal-day-header">SAT</div>
-          <!-- Dynamic cells appended here by JS -->
+
+        <!-- RIGHT PANE: AI QUEUE -->
+        <div class="planner-pane right-pane">
+          <div class="ai-console-header">
+            <h2 class="section-title" data-i18n="unscheduledTasks">UNSCHEDULED TASKS</h2>
+            <div class="action-btn ai-btn interactable" id="btn-replan-ai" data-i18n="aiReplan">[ REPLAN WITH AI ]</div>
+          </div>
+          <div class="queue-list" id="ai-queue-list">
+            <!-- Unscheduled tasks or AI generated blocks here -->
+            <div class="empty-queue-msg">NO TASKS IN QUEUE</div>
+          </div>
+          <div class="ai-actions hidden" id="ai-actions-panel">
+            <div class="action-btn interactable" id="btn-ai-apply" data-i18n="btnApplyPlan">[ APPLY PLAN ]</div>
+            <div class="action-btn secondary-btn interactable" id="btn-ai-regen" data-i18n="btnRegenerate">[ REGENERATE ]</div>
+          </div>
         </div>
       </div>
     </section>
@@ -93,6 +114,36 @@
         <div id="archive-gallery"></div>
       </div>
     </section>
+
+    <!-- AI PROMPT MODAL -->
+    <div class="modal-overlay hidden" id="ai-prompt-modal">
+      <div class="modal-box ai-prompt-box">
+        <h3 class="modal-title ai-glitch-text" data-i18n="aiPromptTitle">WHAT IS THE PRIMARY TARGET?</h3>
+        <p class="ai-desc" data-i18n="aiPromptDesc">Enter your objective. The system will curate your focus flow.</p>
+        <div class="modal-field">
+          <input type="text" id="ai-target-input" class="modal-input" placeholder="e.g., Deep System Architecture Design" data-i18n="aiInputPlaceholder" />
+        </div>
+        <div class="modal-actions">
+          <div class="action-btn interactable" id="btn-ai-curate" data-i18n="btnCurate">[ CURATE FLOW ]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI LOADING OVERLAY -->
+    <div class="modal-overlay hidden" id="ai-loading-overlay">
+      <div class="ai-thinking-text" data-i18n="aiThinking">CURATING TONIGHT'S FLOW...</div>
+    </div>
+
+    <!-- MEMORY VAULT DETAIL MODAL -->
+    <div class="modal-overlay hidden" id="vault-detail-modal">
+      <div class="modal-box vault-box">
+        <h3 class="modal-title" data-i18n="memoryVault">RITUAL MEMORY VAULT</h3>
+        <div id="vault-detail-content"></div>
+        <div class="modal-actions">
+          <div class="action-btn interactable" id="btn-vault-close" data-i18n="vaultReturn">[ RETURN TO ARCHIVE ]</div>
+        </div>
+      </div>
+    </div>
 
     <!-- EDIT MODAL -->
     <div class="modal-overlay hidden" id="edit-modal">

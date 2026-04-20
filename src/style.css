@@ -93,8 +93,6 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 .focus-controls > * { pointer-events: auto; }
 
 .action-btn { font-family: var(--font-arcade); font-weight: bold; font-size: 1rem; letter-spacing: 2px; background: var(--bg-deep); border-radius: 0; outline: none; border: 1px solid var(--line-subtle); color: var(--text-muted); padding: 1.2rem 2.5rem; cursor: pointer; position: relative; text-align: center; display: inline-flex; justify-content: center; align-items: center; white-space: nowrap; box-shadow: 3px 3px 0px var(--bg-stage); transition: transform 0.1s, box-shadow 0.1s, color 0.2s, background 0.2s, border-color 0.2s; }
-.action-btn:before { content: '['; margin-right: 0.5rem; opacity: 0.5; }
-.action-btn:after { content: ']'; margin-left: 0.5rem; opacity: 0.5; }
 
 .action-btn:hover { color: var(--text-primary); box-shadow: 4px 4px 0px var(--text-muted); background: var(--bg-surface); }
 .action-btn:active { transform: translate(3px, 3px); box-shadow: 0px 0px 0px var(--text-muted); color: var(--text-primary); }
@@ -144,6 +142,7 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 .cal-task-item.done { text-decoration: line-through; opacity: 0.4; }
 .cal-task-item.missed { border-left-style: dashed; border-left-color: var(--hero-red); color: var(--hero-red); opacity: 0.6; }
 .cal-task-item:hover { background: var(--text-primary); color: var(--bg-deep); border-color: transparent; }
+.cal-task-item.tentative { border-left-color: var(--hero-red); border-left-style: dashed; background: rgba(251,54,64,0.1); color: var(--hero-red); letter-spacing: 1px; animation: pulse 2s infinite; pointer-events: none; }
 
 /* ========================= */
 /* 5. ARCHIVE                 */
@@ -180,16 +179,46 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 .modal-input { font-family: var(--font-arcade); font-size: 1.2rem; background: var(--bg-deep); border: var(--border-solid); color: var(--text-primary); padding: 0.8rem 1rem; width: 100%; outline: none; }
 .modal-input:focus { border-color: var(--hero-red); }
 .modal-row { display: flex; gap: 1rem; }
-.modal-row .modal-field { flex: 1; }
-.modal-actions { display: flex; gap: 0.8rem; margin-top: 2rem; flex-wrap: wrap; }
 .modal-actions .action-btn { flex: 1; text-align: center; min-width: 100px; }
+
+/* ========================= */
+/* V9: PLANNER SPLIT & AI    */
+/* ========================= */
+.planner-split { display: flex; width: 95vw; max-width: 1200px; height: 75vh; gap: 2rem; margin: 0 auto; align-items: stretch; justify-content: center; }
+.planner-pane { flex: 1; display: flex; flex-direction: column; background: var(--bg-surface); border: var(--border-solid); padding: 1.5rem; overflow-y: auto; overflow-x: hidden; position: relative; }
+.left-pane { flex: 1.3; }
+.right-pane { flex: 0.7; }
+.ai-console-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 1rem; margin-bottom: 1rem; }
+.ai-console-header .section-title { margin-bottom: 0; font-size: 1.2rem; }
+.ai-btn { padding: 0.6rem 1rem; font-size: 0.8rem; letter-spacing: 1px; color: var(--text-primary); border-color: rgba(255,255,255,0.3); }
+.ai-btn:hover { background: rgba(255,255,255,0.1); }
+.queue-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; }
+.empty-queue-msg { text-align: center; color: var(--text-muted); font-family: var(--font-arcade); margin-top: 2rem; opacity: 0.5; letter-spacing: 2px; }
+.ai-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.5rem; }
+.ai-actions.hidden { display: none; }
+.ai-task-card { background: rgba(0,0,0,0.5); border: var(--border-solid); padding: 1rem; font-family: var(--font-ui); color: var(--text-primary); }
+.ai-task-card .task-duration { float: right; color: var(--hero-red); font-weight: bold; }
+
+/* AI PROMPT / LOADING */
+.ai-prompt-box { width: 500px; text-align: center; }
+.ai-glitch-text { text-shadow: 2px 2px 0 var(--hero-red); margin-bottom: 1rem; font-size: 1.5rem; }
+.ai-desc { font-family: var(--font-ui); color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 1px; }
+#ai-loading-overlay { background: var(--bg-deep); z-index: 200; }
+.ai-thinking-text { font-family: var(--font-arcade); font-size: 2rem; color: var(--hero-red); letter-spacing: 4px; animation: pulse 1s infinite alternate; }
+
+/* VAULT DETAILS */
+.vault-box { width: 450px; }
+.vault-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-family: var(--font-ui); font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.4rem; }
+.vault-row .v-label { color: var(--text-muted); letter-spacing: 1px; }
+.vault-row .v-value { color: var(--text-primary); text-align: right; word-break: break-all; max-width: 65%; }
+.vault-note-box { margin-top: 1rem; padding: 1rem; background: rgba(251,54,64,0.05); border: 1px dashed rgba(251,54,64,0.3); font-family: var(--font-arcade); color: var(--hero-red); font-size: 1rem; letter-spacing: 1px; line-height: 1.4; }
 
 /* ========================= */
 /* MOBILE RESPONSIVE (HUD & Commands) */
 /* ========================= */
 @media (max-width: 768px) {
-  .hud-nav { gap: 1rem; width: 100%; top: env(safe-area-inset-top, 1.5rem); padding: 0 1rem; }
-  .corner-utility { top: env(safe-area-inset-top, 1.5rem); right: 1rem; }
+  .corner-utility { top: env(safe-area-inset-top, 1rem); right: 1.5rem; margin-top: 0; }
+  .hud-nav { top: calc(env(safe-area-inset-top, 1rem) + 2.5rem); gap: 1.2rem; width: 100%; padding: 0 1rem; margin-top: 0; }
   .nav-item { font-size: 0.95rem; letter-spacing: 1px; }
 
   .hero-block { padding: 2rem 1.5rem; width: 90%; }
@@ -202,4 +231,9 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
   .cal-day-header { padding: 0.4rem 0.2rem; font-size: 0.75rem; letter-spacing: 0; }
   .cal-cell { min-height: 80px; padding: 0.2rem; }
   .cal-task-item { font-size: 0.6rem; padding: 0.2rem; }
+  
+  .planner-split { flex-direction: column; width: 100%; height: auto; gap: 1rem; padding-bottom: 5rem; }
+  .planner-pane { overflow-y: visible; }
+  .left-pane { flex: none; height: 50vh; overflow-y: auto; }
+  .right-pane { flex: none; min-height: 40vh; }
 }

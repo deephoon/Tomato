@@ -103,6 +103,8 @@ function init() {
   bindBreakControls();
   bindModal();
   bindTimerEvents();
+  bindAIFlowEvents();
+  bindArchiveVault();
   
   // Set initial i18n
   updateI18nDOM();
@@ -255,15 +257,20 @@ function renderPlanner() {
     const dateStr = `${cellYear}-${String(cellMonth + 1).padStart(2, '0')}-${String(cellDay).padStart(2, '0')}`;
     const isToday = dateStr === getTodayStr();
 
-    // Get tasks for this date
-    const tasksForDate = appState.tasks.filter(t => t.targetDate === dateStr).sort((a,b) => (a.timeLabel || '').localeCompare(b.timeLabel || ''));
+    // Merge persistent tasks and AI tentative tasks
+    const allTasksForDate = [
+      ...appState.tasks.filter(t => t.targetDate === dateStr),
+      ...appState.aiTasks.filter(t => t.targetDate === dateStr).map(t => ({ ...t, isTentative: true }))
+    ].sort((a,b) => (a.timeLabel || '').localeCompare(b.timeLabel || ''));
 
     let tasksHTML = '';
-    tasksForDate.forEach(t => {
-      let cls = '';
-      if (t.status === 'active') cls = 'active';
-      if (t.status === 'done') cls = 'done';
-      if (t.status === 'missed') cls = 'missed';
+    allTasksForDate.forEach(t => {
+      let cls = t.isTentative ? 'tentative' : '';
+      if (!t.isTentative) {
+        if (t.status === 'active') cls = 'active';
+        if (t.status === 'done') cls = 'done';
+        if (t.status === 'missed') cls = 'missed';
+      }
 
       tasksHTML += `
         <div class="cal-task-item ${cls}" data-id="${t.id}" title="${t.title}">
@@ -281,6 +288,29 @@ function renderPlanner() {
       </div>
     `;
     calGrid.insertAdjacentHTML('beforeend', cellHtml);
+  }
+
+  // --- Render Right Pane (AI Queue) ---
+  const aiQueueList = document.getElementById('ai-queue-list');
+  const aiActionsPanel = document.getElementById('ai-actions-panel');
+  if (aiQueueList && aiActionsPanel) {
+    if (appState.aiTasks.length === 0) {
+      aiQueueList.innerHTML = `<div class="empty-queue-msg">${t('unscheduledTasks') || 'NO TASKS IN QUEUE'}</div>`;
+      aiActionsPanel.classList.add('hidden');
+    } else {
+      let queueHTML = '';
+      appState.aiTasks.forEach(t => {
+        queueHTML += `
+          <div class="ai-task-card">
+            <span class="task-duration">${t.focusMinutes}m</span>
+            <div>${t.title}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">SLOT: ${t.targetDate} / ${t.timeLabel}</div>
+          </div>
+        `;
+      });
+      aiQueueList.innerHTML = queueHTML;
+      aiActionsPanel.classList.remove('hidden');
+    }
   }
 
   bindPlannerEvents();
@@ -363,8 +393,12 @@ function renderArchive() {
       const cls = i % 2 === 0 ? 'red' : 'white';
       const icon = i % 2 === 0 ? '■' : '▲';
       const label = (h.title || 'RITUAL').split(' ')[0];
+      // Inject history ID (or generate one if missing) to map clicks to details
+      const hId = h.id || `h_${Date.now()}_${i}`;
+      h.id = hId; 
+      
       groupHTML += `
-        <div class="stamp ${cls} interactable">
+        <div class="stamp ${cls} interactable vault-stamp" data-hid="${hId}">
           <div class="stamp-icon">${icon}</div>
           <div class="stamp-title">${label}</div>
           <div class="stamp-duration">${h.focusMinutes || 25}m</div>
@@ -541,6 +575,171 @@ function bindTimerEvents() {
 }
 
 // ==========================================
+// V9: AI PLANNER & ARCHIVE VAULT BINDINGS
+// ==========================================
+function bindAIFlowEvents() {
+  const btnReplan = document.getElementById('btn-replan-ai');
+  const modalPrompt = document.getElementById('ai-prompt-modal');
+  const btnCurate = document.getElementById('btn-ai-curate');
+  const inputTarget = document.getElementById('ai-target-input');
+  const loadingOverlay = document.getElementById('ai-loading-overlay');
+  
+  const btnApply = document.getElementById('btn-ai-apply');
+  const btnRegen = document.getElementById('btn-ai-regen');
+
+  if (btnReplan) {
+    btnReplan.onclick = () => {
+      if (modalPrompt) modalPrompt.classList.remove('hidden');
+      if (inputTarget) inputTarget.focus();
+    };
+  }
+
+  if (btnCurate) {
+    btnCurate.onclick = () => {
+      const target = inputTarget ? inputTarget.value.trim() : '';
+      if (!target) return;
+      
+      if (modalPrompt) modalPrompt.classList.add('hidden');
+      if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+
+      // Simulate AI Processing
+      setTimeout(() => {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        generateAITasks(target);
+      }, 1500);
+    };
+  }
+
+  if (btnApply) {
+    btnApply.onclick = () => {
+      appState.aiTasks.forEach(t => {
+        appState.tasks.push({
+          id: t.id,
+          title: t.title,
+          focusMinutes: t.focusMinutes,
+          breakMinutes: t.breakMinutes,
+          status: 'open',
+          timeLabel: t.timeLabel,
+          targetDate: t.targetDate,
+          order: appState.tasks.length
+        });
+      });
+      appState.aiTasks = [];
+      saveTasks();
+      renderAll();
+    };
+  }
+
+  if (btnRegen) {
+    btnRegen.onclick = () => {
+      appState.aiTasks = [];
+      if (modalPrompt) modalPrompt.classList.remove('hidden');
+    };
+  }
+}
+
+function generateAITasks(objective) {
+  const now = new Date();
+  const targetDateStr = getTodayStr();
+  
+  // Fake simple generation based on objective string
+  const blocks = [
+    { title: `${objective} - Phase 1 [Drafting]`, dur: 50 },
+    { title: `${objective} - Phase 2 [Review]`, dur: 25 },
+    { title: `${objective} - Final Polish`, dur: 25 }
+  ];
+
+  let currentMin = now.getMinutes() < 30 ? 30 : 0;
+  let currentHr = now.getMinutes() < 30 ? now.getHours() : now.getHours() + 1;
+
+  appState.aiTasks = blocks.map((b, i) => {
+    const timeLabel = `${String(currentHr).padStart(2,'0')}:${String(currentMin).padStart(2,'0')}`;
+    // advanced time a bit
+    currentMin += b.dur + 5;
+    if (currentMin >= 60) {
+      currentHr += 1;
+      currentMin -= 60;
+    }
+    
+    return {
+      id: 'ai_' + Date.now().toString() + i,
+      title: b.title,
+      focusMinutes: b.dur,
+      breakMinutes: 5,
+      targetDate: targetDateStr,
+      timeLabel: timeLabel
+    };
+  });
+  
+  renderAll();
+}
+
+function bindArchiveVault() {
+  const btnClose = document.getElementById('btn-vault-close');
+  const modalVault = document.getElementById('vault-detail-modal');
+  const vaultContent = document.getElementById('vault-detail-content');
+  const archiveGallery = document.getElementById('archive-gallery');
+
+  if (archiveGallery) {
+    archiveGallery.addEventListener('click', (e) => {
+      const stamp = e.target.closest('.vault-stamp');
+      if (!stamp) return;
+      const hId = stamp.dataset.hid;
+      if (!hId) return;
+
+      const record = appState.history.find(h => h.id === hId);
+      if (!record) return;
+
+      // Render details
+      const cDate = new Date(record.completedAt || Date.now());
+      const dateStr = `${cDate.getFullYear()}.${String(cDate.getMonth()+1).padStart(2,'0')}.${String(cDate.getDate()).padStart(2,'0')} / ${String(cDate.getHours()).padStart(2,'0')}:${String(cDate.getMinutes()).padStart(2,'0')}`;
+      
+      vaultContent.innerHTML = `
+        <div class="vault-row">
+          <span class="v-label">RITUAL ID:</span>
+          <span class="v-value">${record.id}</span>
+        </div>
+        <div class="vault-row">
+          <span class="v-label">DATE / TIME:</span>
+          <span class="v-value">${dateStr}</span>
+        </div>
+        <div class="vault-row">
+          <span class="v-label">TITLE:</span>
+          <span class="v-value">${record.title || t('untitled')}</span>
+        </div>
+        <div class="vault-row">
+          <span class="v-label">DURATION:</span>
+          <span class="v-value">${record.focusMinutes || 25} MIN</span>
+        </div>
+        <div class="vault-row">
+          <span class="v-label">${t('linkedTask') || 'LINKED TASK'}:</span>
+          <span class="v-value">${record.title || '--'}</span>
+        </div>
+        <div class="vault-row">
+          <span class="v-label">${t('sequence') || 'SEQUENCE'}:</span>
+          <span class="v-value">${record.sequence || 1} RITUAL TONIGHT</span>
+        </div>
+        <div class="vault-row">
+          <span class="v-label">${t('statusText') || 'STATUS'}:</span>
+          <span class="v-value highlight-red">COMPLETED</span>
+        </div>
+        <div class="vault-note-box">
+          ${record.systemNote || "Signal remained stable through completion."}
+        </div>
+      `;
+
+      if (modalVault) modalVault.classList.remove('hidden');
+    });
+  }
+
+  if (btnClose) {
+    btnClose.onclick = () => {
+      if (modalVault) modalVault.classList.add('hidden');
+    };
+  }
+}
+
+// ==========================================
 // FOCUS → BREAK CYCLE
 // ==========================================
 function completeFocusSession() {
@@ -549,14 +748,17 @@ function completeFocusSession() {
     task.status = 'done';
     saveTasks();
 
+    appState.session.pomodoroCount = (appState.session.pomodoroCount || 0) + 1;
+    
+    // Add meta data for Archive Vault
     appState.history.push({
       ...task,
       completedAt: Date.now(),
-      date: getTodayStr()
+      date: getTodayStr(),
+      sequence: appState.session.pomodoroCount,
+      systemNote: `[ SYSTEM ]: Ritual ${task.title || 'Untitled'} successfully encoded into memory. Connection stable.`
     });
     saveHistory();
-
-    appState.session.pomodoroCount = (appState.session.pomodoroCount || 0) + 1;
     saveSession();
   }
 

@@ -51,7 +51,8 @@ const DEFAULT_SESSION = {
   pomodoroCount: 0,       // today's completed pomodoros
   pomodoroGoal: 4,        // daily goal
   todayDate: getTodayStr(),
-  calendarOffset: 0       // 0 for current month, -1 for previous, etc.
+  calendarOffset: 0,      // 0 for current month, -1 for previous, etc.
+  aiPlanningActive: false
 };
 
 // --- Global App State ---
@@ -59,6 +60,7 @@ export const appState = {
   tasks: safeLoad(LOCAL_STORAGE_KEY, DEFAULT_TASKS),
   history: safeLoad(LOCAL_HISTORY_KEY, []),
   session: { ...DEFAULT_SESSION, ...safeLoad(LOCAL_SESSION_KEY, DEFAULT_SESSION) },
+  aiTasks: [], // AI proposed tasks
   prefs: { lang: localStorage.getItem(LANG_STORAGE_KEY) || 'en' }
 };
 
