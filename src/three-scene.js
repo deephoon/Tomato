@@ -211,6 +211,16 @@ export function set3DMode(mode) {
     gsap.to(monolithWire.material, { opacity: 0.8, duration: 1.5 });
     gsap.to(monolithSignal.material, { opacity: 0.3, duration: 2 });
   }
+  else if (mode === 'break') {
+    // BREAK: Monolith freezes, wireframe goes green, everything dims
+    CFG.gridSpeed = 0.0003;
+    CFG.monolithRotSpeed = 0; // Frozen
+    gsap.to(monolithPivot.position, { y: 0, z: -2, duration: 2, ease: 'power2.out' });
+    gsap.to(monolithPivot.scale, { x: 0.8, y: 0.8, z: 0.8, duration: 2 });
+    gsap.to(monolithWire.material.color, { r: 0.18, g: 0.8, b: 0.44, duration: 2 }); // #2ECC71
+    gsap.to(monolithWire.material, { opacity: 0.4, duration: 2 });
+    gsap.to(monolithSignal.material, { opacity: 0, duration: 1 });
+  }
   else if (mode === 'calendar') {
     CFG.gridSpeed = 0.001;
     CFG.monolithRotSpeed = 0.0002;

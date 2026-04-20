@@ -1,7 +1,6 @@
 // ==========================================
 // TIMER LOGIC — Date.now() Based Precision
 // ==========================================
-// No circular dependency: dispatches CustomEvents for UI to handle
 import { appState, getActiveTask } from './state.js';
 
 let timerInterval = null;
@@ -27,10 +26,12 @@ export function switchMode(newMode) {
       appState.session.remainingSeconds = task ? task.focusMinutes * 60 : 0;
     }
   } else if (newMode === 'break') {
-    appState.session.remainingSeconds = task ? task.breakMinutes * 60 : 0;
+    const breakMins = task ? (task.breakMinutes || 5) : 5;
+    // Long break every 4 pomos
+    const isLongBreak = appState.session.pomodoroCount > 0 && appState.session.pomodoroCount % 4 === 0;
+    appState.session.remainingSeconds = isLongBreak ? 15 * 60 : breakMins * 60;
   }
 
-  // Dispatch state change event for UI to react
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
@@ -68,17 +69,15 @@ export function stopTimer() {
 
 // --- Tick ---
 function tick() {
-  const elTimeLeft = document.getElementById('time-left');
   const remainingMs = appState.session.endTime - Date.now();
   if (remainingMs <= 0) {
     appState.session.remainingSeconds = 0;
     stopTimer();
     window.dispatchEvent(new CustomEvent('tomato:statechange'));
-    // Dispatch timer-end event for UI to show transition modal
     window.dispatchEvent(new CustomEvent('tomato:timerend'));
   } else {
     appState.session.remainingSeconds = remainingMs / 1000;
-    elTimeLeft.textContent = formatTime(appState.session.remainingSeconds);
+    window.dispatchEvent(new CustomEvent('tomato:statechange'));
   }
 }
 

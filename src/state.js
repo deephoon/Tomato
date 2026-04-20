@@ -1,101 +1,28 @@
 // ==========================================
 // STATE MANAGEMENT — Single Source of Truth
 // ==========================================
-import gsap from 'gsap';
-
-// --- i18n Dictionary ---
-export const i18n = {
-  ko: {
-    selectTask: '작업 선택',
-    restBreak: '휴식',
-    timesUp: '시간 종료',
-    greatSession: '훌륭한 집중이었어요.',
-    startBreak: '휴식 시작',
-    extend1min: '+ 1분 연장',
-    finishSession: '세션 종료',
-    breakOver: '휴식 끝',
-    readyAgain: '다시 집중할 준비 됐나요?',
-    startFocus: '집중 시작',
-    tasks: '작업 목록',
-    newTask: '+ 새 작업',
-    taskName: '작업 이름',
-    workMin: '작업 (분)',
-    breakMin: '휴식 (분)',
-    themeColor1: '테마 색상 1',
-    themeColor2: '테마 색상 2',
-    cancel: '취소',
-    saveTask: '저장',
-    minOneTask: '최소 하나의 작업이 필요합니다!',
-    work: '작업',
-    breakLabel: '휴식',
-    paused: '일시 정지',
-    interruptionMsg: '집중 흐름을 이어가거나, 잠시 쉴 수 있습니다.',
-    resume: '계속 진행',
-    startBreakNow: '지금 바로 휴식',
-    startFocusNow: '바로 집중 시작',
-    finishEarly: '일찍 완료',
-    glassColor: '유리 본체 색상',
-    resetTimer: '타이머 초기화',
-    editTask: '작업 설정',
-    aiSlice: 'AI로 분해하기',
-    aiSlicing: 'AI 분해 중...',
-    aiKeyNeeded: 'Settings에서 Gemini API Key를 먼저 입력하세요.',
-    apiKeyLabel: 'Gemini API Key',
-    apiKeyPlaceholder: 'AIza...'
-  },
-  en: {
-    selectTask: 'SELECT TASK',
-    restBreak: 'REST / BREAK',
-    timesUp: "Time's Up",
-    greatSession: 'Great focus session.',
-    startBreak: 'Start Break',
-    extend1min: '+ Extend 1 min',
-    finishSession: 'Finish Session',
-    breakOver: 'Break Over',
-    readyAgain: 'Ready to dive back in?',
-    startFocus: 'Start Focus',
-    tasks: 'Tasks',
-    newTask: '+ New Task',
-    taskName: 'Task Name',
-    workMin: 'Work (min)',
-    breakMin: 'Break (min)',
-    themeColor1: 'Theme Color 1',
-    themeColor2: 'Theme Color 2',
-    cancel: 'Cancel',
-    saveTask: 'Save Task',
-    minOneTask: 'You must have at least one task!',
-    work: 'Work',
-    breakLabel: 'Break',
-    paused: 'Paused',
-    interruptionMsg: 'Continue your flow, or take a break.',
-    resume: 'Resume',
-    startBreakNow: 'Start Break Now',
-    startFocusNow: 'Start Focus Now',
-    finishEarly: 'Finish Early',
-    glassColor: 'Glass Body Color',
-    resetTimer: 'Reset Timer',
-    editTask: 'Edit Task',
-    aiSlice: 'AI Slice',
-    aiSlicing: 'AI Slicing...',
-    aiKeyNeeded: 'Enter Gemini API Key in Settings first.',
-    apiKeyLabel: 'Gemini API Key',
-    apiKeyPlaceholder: 'AIza...'
-  }
-};
-
-// --- Translation Helper ---
-export function t(key) {
-  return i18n[appState.prefs.lang]?.[key] || i18n.en[key] || key;
-}
 
 // --- Storage Keys ---
 const LOCAL_STORAGE_KEY = 'tomato_os_tasks';
 const LOCAL_HISTORY_KEY = 'tomato_os_history';
+const LOCAL_SESSION_KEY = 'tomato_os_session';
 const LANG_STORAGE_KEY = 'tomato_lang';
+
+// --- Helpers ---
+export function getTodayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+export function getTodayDisplay() {
+  const d = new Date();
+  const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} // ${days[d.getDay()]}`;
+}
 
 // --- Default Tasks ---
 const DEFAULT_TASKS = [
-  { id: 't_1', title: 'DEEP SYSTEM DESIGN', focusMinutes: 25, status: 'active', timeLabel: '22:00' }
+  { id: 't_1', title: 'DEEP SYSTEM DESIGN', focusMinutes: 25, breakMinutes: 5, status: 'active', timeLabel: '22:00', order: 0 }
 ];
 
 // --- Persistence Security Core ---
@@ -104,28 +31,51 @@ function safeLoad(key, defaultData) {
     const raw = localStorage.getItem(key);
     if (!raw || raw === 'undefined' || raw === 'null') return defaultData;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultData;
+    if (Array.isArray(defaultData)) {
+      return Array.isArray(parsed) ? parsed : defaultData;
+    }
+    return typeof parsed === 'object' && parsed !== null ? parsed : defaultData;
   } catch (err) {
-    console.error('Storage wipe due to parsing error', err);
+    console.error('Storage parse error:', err);
     return defaultData;
   }
 }
+
+// --- Default Session ---
+const DEFAULT_SESSION = {
+  activeTaskId: null,
+  mode: 'idle',           // idle | focus | break
+  remainingSeconds: 0,
+  isRunning: false,
+  endTime: 0,
+  pomodoroCount: 0,       // today's completed pomodoros
+  pomodoroGoal: 4,        // daily goal
+  todayDate: getTodayStr()
+};
 
 // --- Global App State ---
 export const appState = {
   tasks: safeLoad(LOCAL_STORAGE_KEY, DEFAULT_TASKS),
   history: safeLoad(LOCAL_HISTORY_KEY, []),
-  session: {
-    activeTaskId: null,
-    mode: 'idle',       // idle | focus | break
-    remainingSeconds: 0,
-    isRunning: false,
-    endTime: 0
-  },
-  prefs: {
-    lang: localStorage.getItem(LANG_STORAGE_KEY) || 'ko'
-  }
+  session: { ...DEFAULT_SESSION, ...safeLoad(LOCAL_SESSION_KEY, DEFAULT_SESSION) },
 };
+
+// Day rollover check: if todayDate doesn't match, reset pomodoro count
+(function checkDayRollover() {
+  const today = getTodayStr();
+  if (appState.session.todayDate !== today) {
+    appState.session.pomodoroCount = 0;
+    appState.session.todayDate = today;
+    // Mark yesterday's incomplete tasks as missed
+    appState.tasks.forEach(t => {
+      if (t.status === 'active' || t.status === 'open') {
+        t.status = 'missed';
+      }
+    });
+    saveTasks();
+    saveSession();
+  }
+})();
 
 // --- Persistence ---
 export function saveTasks() {
@@ -136,8 +86,12 @@ export function saveHistory() {
   localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(appState.history));
 }
 
-export function saveLang() {
-  localStorage.setItem(LANG_STORAGE_KEY, appState.prefs.lang);
+export function saveSession() {
+  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify({
+    pomodoroCount: appState.session.pomodoroCount,
+    pomodoroGoal: appState.session.pomodoroGoal,
+    todayDate: appState.session.todayDate
+  }));
 }
 
 // --- Active Task Helper ---
