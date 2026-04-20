@@ -22,7 +22,7 @@ export function getTodayDisplay() {
 
 // --- Default Tasks ---
 const DEFAULT_TASKS = [
-  { id: 't_1', title: 'DEEP SYSTEM DESIGN', focusMinutes: 25, breakMinutes: 5, status: 'active', timeLabel: '22:00', order: 0 }
+  { id: 't_1', title: 'DEEP SYSTEM DESIGN', focusMinutes: 25, breakMinutes: 5, status: 'active', timeLabel: '22:00', targetDate: getTodayStr(), order: 0 }
 ];
 
 // --- Persistence Security Core ---
@@ -50,7 +50,8 @@ const DEFAULT_SESSION = {
   endTime: 0,
   pomodoroCount: 0,       // today's completed pomodoros
   pomodoroGoal: 4,        // daily goal
-  todayDate: getTodayStr()
+  todayDate: getTodayStr(),
+  calendarOffset: 0       // 0 for current month, -1 for previous, etc.
 };
 
 // --- Global App State ---
@@ -96,7 +97,8 @@ export function saveSession() {
   localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify({
     pomodoroCount: appState.session.pomodoroCount,
     pomodoroGoal: appState.session.pomodoroGoal,
-    todayDate: appState.session.todayDate
+    todayDate: appState.session.todayDate,
+    calendarOffset: appState.session.calendarOffset
   }));
 }
 

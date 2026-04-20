@@ -15,9 +15,9 @@
   --line-dashed: 1px dashed var(--line-subtle);
   --border-solid: 1px solid var(--line-subtle);
 
-  --font-chunky: 'Pixelify Sans', sans-serif;
-  --font-arcade: 'VT323', monospace;
-  --font-ui: 'DotGothic16', sans-serif;
+  --font-chunky: 'Pixelify Sans', 'NeoDunggeunmo', sans-serif;
+  --font-arcade: 'VT323', 'NeoDunggeunmo', monospace;
+  --font-ui: 'DotGothic16', 'NeoDunggeunmo', sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -54,7 +54,7 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 .hero-block:hover .block-glow { opacity: 1; }
 
 /* Pomo dots */
-.pomo-dots { font-family: var(--font-arcade); font-size: 1.5rem; margin-top: 1.5rem; letter-spacing: 6px; color: var(--text-muted); }
+.pomo-dots { font-family: var(--font-arcade); font-size: 1.5rem; margin-top: 1.5rem; letter-spacing: 6px; color: var(--text-muted); display: inline-block; }
 .pomo-dot-filled { color: var(--hero-red); }
 .pomo-dot-empty { color: var(--text-muted); opacity: 0.4; }
 
@@ -90,56 +90,38 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 .break-status { color: var(--break-green); }
 
 /* ========================= */
-/* 4. PLANNER (TIMELINE)      */
+/* 4. PLANNER (CALENDAR VIEW) */
 /* ========================= */
-.planner-container { width: 550px; max-width: 90vw; position: relative; margin-top: 2rem; max-height: 70vh; overflow-y: auto; padding-right: 10px; }
-.planner-container::-webkit-scrollbar { width: 4px; }
-.planner-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.calendar-container { width: 900px; max-width: 95vw; background: rgba(5,5,5,0.85); backdrop-filter: blur(8px); border: var(--border-solid); padding: 2rem; position: relative; margin-top: 2rem; max-height: 85vh; overflow-y: auto; }
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.cal-nav-btn { font-size: 1.5rem; font-family: var(--font-arcade); color: var(--text-muted); cursor: pointer; transition: color 0.2s; }
+.cal-nav-btn:hover { color: var(--text-primary); }
+.cal-title { margin-bottom: 0 !important; color: var(--text-primary); }
 
-/* The vertical axis line */
-.timeline-axis { position: absolute; left: 75px; top: 0; bottom: 0; width: 1px; background: var(--line-subtle); z-index: 1; border-left: 1px dashed rgba(255,255,255,0.05); }
+.calendar-grid { display: flex; flex-direction: column; width: 100%; border-top: var(--border-solid); border-left: var(--border-solid); }
+/* Header Row */
+.cal-day-header { flex: 1; text-align: center; font-family: var(--font-ui); padding: 0.8rem; border-right: var(--border-solid); border-bottom: var(--border-solid); font-size: 0.9rem; letter-spacing: 1px; color: var(--text-muted); }
+.cal-day-header:first-child { color: var(--hero-red); } /* Sunday Red */
+.calendar-grid > div:nth-child(-n+7) { display: inline-block; float: left; width: calc(100% / 7); }
+.calendar-grid::after { content: ''; display: table; clear: both; }
 
-.slot-list { display: flex; flex-direction: column; gap: 0.8rem; position: relative; z-index: 2; padding-top: 1rem; padding-bottom: 2rem; }
-.slot { padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; border: var(--border-solid); cursor: pointer; transition: all 0.2s; position: relative; background: rgba(5,5,5,0.9); backdrop-filter: blur(4px); }
-.slot.dragging { opacity: 0.4; border-color: var(--hero-red); }
+/* Body Area */
+.cal-body { display: flex; flex-wrap: wrap; width: 100%; }
+.cal-cell { width: 14.28%; border-right: var(--border-solid); border-bottom: var(--border-solid); min-height: 120px; padding: 0.5rem; position: relative; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s; }
+.cal-cell:hover { background: rgba(255,255,255,0.03); }
+.cal-cell.other-month { background: rgba(0,0,0,0.4); opacity: 0.5; }
+.cal-cell.today-cell { border: 1px solid var(--hero-red); box-shadow: inset 0 0 10px rgba(251,54,64,0.1); background: rgba(251,54,64,0.02); }
+.cal-date-label { font-family: var(--font-arcade); font-size: 1.1rem; color: var(--text-muted); position: absolute; top: 0.5rem; right: 0.5rem; }
+.today-cell .cal-date-label { color: var(--hero-red); font-weight: bold; }
 
-/* Circle on the timeline */
-.slot::before { content: ''; position: absolute; left: 71px; top: 50%; transform: translateY(-50%); width: 9px; height: 9px; background: var(--bg-deep); border: 2px solid var(--text-muted); z-index: 3; transition: all 0.2s; }
-.slot.active-slot::before { border-color: var(--hero-red); background: var(--hero-red); box-shadow: 0 0 10px var(--hero-red-glow); }
-.slot.completed::before { border-color: rgba(255,255,255,0.2); background: transparent; }
-.slot.empty::before { display: none; }
+/* Task items inside cell */
+.cal-tasks { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
+.cal-task-item { font-family: var(--font-ui); font-size: 0.75rem; padding: 0.3rem 0.4rem; background: rgba(255,255,255,0.08); border-left: 2px solid var(--text-muted); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; position: relative; }
+.cal-task-item.active { border-left-color: var(--hero-red); background: rgba(251,54,64,0.15); }
+.cal-task-item.done { text-decoration: line-through; opacity: 0.5; }
+.cal-task-item.missed { border-left-style: dashed; border-left-color: var(--hero-red); color: var(--hero-red); opacity: 0.7; }
 
-.slot-time { font-family: var(--font-arcade); font-size: 1.3rem; color: var(--text-muted); width: 65px; flex-shrink: 0; text-align: right; margin-right: 15px; }
-.slot-task { font-family: var(--font-ui); font-size: 0.95rem; letter-spacing: 1px; flex: 1; display: flex; align-items: center; gap: 0.8rem; color: var(--text-muted); }
-.slot-duration { font-family: var(--font-arcade); font-size: 0.85rem; color: var(--text-muted); opacity: 0.5; margin-left: auto; }
-
-/* Quick Actions (Hover) */
-.slot-actions { display: none; margin-left: auto; gap: 0.5rem; }
-.slot:hover .slot-actions { display: flex; }
-.slot:hover .slot-duration { display: none; }
-.quick-btn { font-family: var(--font-ui); font-size: 0.75rem; color: var(--bg-deep); background: var(--text-muted); padding: 0.2rem 0.5rem; cursor: pointer; letter-spacing: 1px; border: 1px solid transparent; }
-.quick-btn:hover { background: var(--text-primary); }
-.quick-btn.danger { background: rgba(251,54,64,0.2); color: var(--hero-red); border-color: var(--hero-red); }
-.quick-btn.danger:hover { background: var(--hero-red); color: white; }
-
-/* Slot States */
-.active-slot { border: 2px solid var(--hero-red); box-shadow: 0 0 15px rgba(251,54,64,0.3); }
-.active-slot .slot-time { color: var(--text-primary); font-weight: bold; }
-.active-slot .slot-task { color: var(--text-primary); font-weight: bold; }
-
-.completed { border-color: rgba(255,255,255,0.06); }
-.completed .slot-time, .completed .slot-task { color: rgba(255,255,255,0.2); text-decoration: line-through rgba(255,255,255,0.1); }
-
-.missed { border: 1px dashed rgba(251,54,64,0.3); }
-.missed .slot-time { color: rgba(251,54,64,0.5); }
-.missed .slot-task { color: var(--text-muted); text-decoration: line-through rgba(251,54,64,0.4); }
-
-.open .slot-task { color: rgba(244,241,234,0.6); }
-
-.empty { border: var(--line-dashed); background: transparent; }
-.empty .slot-task { color: var(--text-muted); width: 100%; justify-content: center; }
-.empty:hover { border-color: var(--text-primary); }
-.empty:hover .slot-task { color: var(--text-primary); }
+.cal-task-item:hover { transform: scale(1.02); z-index: 5; background: var(--text-primary); color: var(--bg-deep); border-color: transparent; }
 
 /* ========================= */
 /* 5. ARCHIVE                 */

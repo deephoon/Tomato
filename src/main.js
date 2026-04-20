@@ -206,120 +206,119 @@ function renderSignalReport() {
 }
 
 // ==========================================
-// PLANNER RENDER (With Timeline & D&D)
+// PLANNER (CALENDAR VIEW)
 // ==========================================
-let draggedTaskId = null;
+const monthNames = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
 function renderPlanner() {
-  if (!elPlannerGrid) return;
-  elPlannerGrid.innerHTML = '';
+  const calBody = document.getElementById('calendar-body');
+  const calTitle = document.getElementById('cal-month-title');
+  if (!calBody || !calTitle) return;
+  calBody.innerHTML = '';
 
-  const sorted = [...appState.tasks].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const now = new Date();
+  const currentViewDate = new Date(now.getFullYear(), now.getMonth() + appState.session.calendarOffset, 1);
+  const year = currentViewDate.getFullYear();
+  const month = currentViewDate.getMonth();
+  
+  calTitle.textContent = `${year}. ${monthNames[month]}`;
 
-  sorted.forEach(task => {
-    let cls = 'open';
-    let prefix = t('stateOpen');
-    const time = task.timeLabel || '--:--';
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    if (task.status === 'done')   { cls = 'completed'; prefix = t('stateDone'); }
-    if (task.status === 'active') { cls = 'active-slot'; prefix = t('stateArmed'); }
-    if (task.status === 'missed') { cls = 'missed'; prefix = t('stateMissed'); }
+  // Draw cells
+  for (let i = 0; i < 42; i++) {
+    let cellDate, cellYear, cellMonth, cellDay, isOtherMonth = false;
 
-    elPlannerGrid.insertAdjacentHTML('beforeend', `
-      <div class="slot ${cls} interactable draggable-slot" draggable="true" data-id="${task.id}">
-        <span class="slot-time">${time}</span>
-        <span class="slot-task">[ ${prefix}${task.title} ]</span>
-        <span class="slot-duration">${task.focusMinutes}m</span>
-        <div class="slot-actions">
-          <div class="quick-btn btn-edit" data-id="${task.id}">MOD</div>
-          <div class="quick-btn danger btn-del" data-id="${task.id}">DEL</div>
+    if (i < firstDay) {
+      // Prev month
+      cellYear = month === 0 ? year - 1 : year;
+      cellMonth = month === 0 ? 11 : month - 1;
+      cellDay = daysInPrevMonth - firstDay + i + 1;
+      isOtherMonth = true;
+    } else if (i >= firstDay + daysInMonth) {
+      // Next month
+      cellYear = month === 11 ? year + 1 : year;
+      cellMonth = month === 11 ? 0 : month + 1;
+      cellDay = i - firstDay - daysInMonth + 1;
+      isOtherMonth = true;
+    } else {
+      // Current month
+      cellYear = year;
+      cellMonth = month;
+      cellDay = i - firstDay + 1;
+    }
+
+    const dateStr = `${cellYear}-${String(cellMonth + 1).padStart(2, '0')}-${String(cellDay).padStart(2, '0')}`;
+    const isToday = dateStr === getTodayStr();
+
+    // Get tasks for this date
+    const tasksForDate = appState.tasks.filter(t => t.targetDate === dateStr).sort((a,b) => (a.timeLabel || '').localeCompare(b.timeLabel || ''));
+
+    let tasksHTML = '';
+    tasksForDate.forEach(t => {
+      let cls = '';
+      if (t.status === 'active') cls = 'active';
+      if (t.status === 'done') cls = 'done';
+      if (t.status === 'missed') cls = 'missed';
+
+      tasksHTML += `
+        <div class="cal-task-item ${cls}" data-id="${t.id}" title="${t.title}">
+          ${t.timeLabel || '--:--'} ${t.title}
+        </div>
+      `;
+    });
+
+    const cellHtml = `
+      <div class="cal-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today-cell' : ''}" data-date="${dateStr}">
+        <span class="cal-date-label">${cellDay}</span>
+        <div class="cal-tasks">
+          ${tasksHTML}
         </div>
       </div>
-    `);
-  });
-
-  elPlannerGrid.insertAdjacentHTML('beforeend', `
-    <div class="slot empty interactable" id="btn-add-task">
-      <span class="slot-time"></span>
-      <span class="slot-task">${t('dropNextRitual')}</span>
-    </div>
-  `);
+    `;
+    calBody.insertAdjacentHTML('beforeend', cellHtml);
+  }
 
   bindPlannerEvents();
 }
 
 function bindPlannerEvents() {
-  // Quick Actions
-  elPlannerGrid.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(e.target.dataset.id); });
-  });
-  elPlannerGrid.querySelectorAll('.btn-del').forEach(btn => {
-    btn.addEventListener('click', (e) => { 
-      e.stopPropagation(); 
-      if (confirm(t('confirmDelete'))) {
-        appState.tasks = appState.tasks.filter(t => t.id !== e.target.dataset.id);
-        saveTasks();
-        renderAll();
-      }
+  const calBody = document.getElementById('calendar-body');
+  
+  // Click on task
+  calBody.querySelectorAll('.cal-task-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditModal(el.dataset.id);
     });
   });
 
-  const addBtn = document.getElementById('btn-add-task');
-  if (addBtn) addBtn.onclick = () => openEditModal(null);
-
-  // Drag and Drop Logic
-  const slots = elPlannerGrid.querySelectorAll('.draggable-slot');
-  slots.forEach(slot => {
-    slot.addEventListener('dragstart', (e) => {
-      draggedTaskId = slot.dataset.id;
-      slot.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-
-    slot.addEventListener('dragend', () => {
-      slot.classList.remove('dragging');
-      draggedTaskId = null;
+  // Click on empty cell
+  calBody.querySelectorAll('.cal-cell').forEach(el => {
+    el.addEventListener('click', () => {
+      openEditModal(null, el.dataset.date);
     });
   });
 
-  elPlannerGrid.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const afterElement = getDragAfterElement(elPlannerGrid, e.clientY);
-    const dragging = document.querySelector('.dragging');
-    if (dragging) {
-      if (afterElement == null) {
-        elPlannerGrid.insertBefore(dragging, addBtn);
-      } else {
-        elPlannerGrid.insertBefore(dragging, afterElement);
-      }
-    }
-  });
+  const btnPrev = document.getElementById('cal-prev');
+  const btnNext = document.getElementById('cal-next');
 
-  elPlannerGrid.addEventListener('drop', (e) => {
-    e.preventDefault();
-    // Recompute order based on DOM position
-    const domSlots = elPlannerGrid.querySelectorAll('.draggable-slot');
-    domSlots.forEach((slot, index) => {
-      const id = slot.dataset.id;
-      const t = appState.tasks.find(x => x.id === id);
-      if (t) t.order = index;
-    });
-    saveTasks();
-    renderAll();
-  });
-}
-
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.draggable-slot:not(.dragging)')];
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
+  if (btnPrev) {
+    btnPrev.onclick = () => {
+      appState.session.calendarOffset--;
+      saveSession();
+      renderAll();
+    };
+  }
+  if (btnNext) {
+    btnNext.onclick = () => {
+      appState.session.calendarOffset++;
+      saveSession();
+      renderAll();
+    };
+  }
 }
 
 // ==========================================
@@ -388,8 +387,12 @@ function renderArchive() {
 // ==========================================
 // EDIT MODAL
 // ==========================================
-function openEditModal(taskId) {
+let currentModalDate = getTodayStr(); // Keep track of which date cell was clicked
+
+function openEditModal(taskId, targetDate = getTodayStr()) {
   if (!elEditModal) return;
+  currentModalDate = targetDate;
+  
   if (taskId) {
     const task = appState.tasks.find(t => t.id === taskId);
     if (!task) return;
@@ -403,7 +406,13 @@ function openEditModal(taskId) {
     elEditTitle.value = '';
     elEditFocus.value = 25;
     elEditBreak.value = 5;
-    elEditTime.value = '';
+    // Auto-fill time to now if it's today, otherwise blank
+    if (targetDate === getTodayStr()) {
+       const now = new Date();
+       elEditTime.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    } else {
+       elEditTime.value = '12:00';
+    }
     elEditTaskId.value = '';
     if (btnModalDelete) btnModalDelete.style.display = 'none';
   }
@@ -438,6 +447,7 @@ function bindModal() {
         breakMinutes: breakMin,
         status: 'open',
         timeLabel,
+        targetDate: currentModalDate,
         order: appState.tasks.length
       });
     }

@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=VT323&family=DotGothic16&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.3/NeoDunggeunmo.woff" rel="stylesheet" type="text/css">
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -61,15 +62,26 @@
       </div>
     </section>
 
-    <!-- 4. PLANNER (TIMELINE) -->
+    <!-- 4. PLANNER (CALENDAR VIEW) -->
     <section id="view-calendar" class="view-layer hidden">
-      <div class="planner-container timeline-view">
-        <h2 class="section-title" data-i18n="plannerTitle">FOCUS SLOTS // TODAY</h2>
-        <div class="timeline-axis" id="planner-timeline">
-          <!-- Dynamically generated timeline hours (e.g. 09:00, 10:00) will go here -->
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <div class="interactable cal-nav-btn" id="cal-prev">[ < ]</div>
+          <h2 class="section-title cal-title" id="cal-month-title">2026. 04</h2>
+          <div class="interactable cal-nav-btn" id="cal-next">[ > ]</div>
         </div>
-        <div class="slot-list" id="planner-grid">
-          <!-- Timetable slots render here -->
+        <div class="calendar-grid">
+          <div class="cal-day-header">SUN</div>
+          <div class="cal-day-header">MON</div>
+          <div class="cal-day-header">TUE</div>
+          <div class="cal-day-header">WED</div>
+          <div class="cal-day-header">THU</div>
+          <div class="cal-day-header">FRI</div>
+          <div class="cal-day-header">SAT</div>
+          
+          <div class="cal-body" id="calendar-body">
+            <!-- Dynamically generated days go here -->
+          </div>
         </div>
       </div>
     </section>
