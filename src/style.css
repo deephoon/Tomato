@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'NeoDunggeunmo';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.3/NeoDunggeunmo.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=VT323&family=DotGothic16&display=swap');
 
 :root {
@@ -93,35 +101,32 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 /* 4. PLANNER (CALENDAR VIEW) */
 /* ========================= */
 .calendar-container { width: 900px; max-width: 95vw; background: rgba(5,5,5,0.85); backdrop-filter: blur(8px); border: var(--border-solid); padding: 2rem; position: relative; margin-top: 2rem; max-height: 85vh; overflow-y: auto; }
-.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.cal-nav-btn { font-size: 1.5rem; font-family: var(--font-arcade); color: var(--text-muted); cursor: pointer; transition: color 0.2s; }
+.calendar-container::-webkit-scrollbar { width: 4px; }
+.calendar-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.cal-nav-btn { font-size: 1.5rem; font-family: var(--font-arcade); color: var(--text-muted); cursor: pointer; transition: color 0.2s; padding: 0.5rem 1rem; }
 .cal-nav-btn:hover { color: var(--text-primary); }
-.cal-title { margin-bottom: 0 !important; color: var(--text-primary); }
+.cal-title { margin-bottom: 0 !important; color: var(--text-primary); font-size: 1.4rem; }
 
-.calendar-grid { display: flex; flex-direction: column; width: 100%; border-top: var(--border-solid); border-left: var(--border-solid); }
-/* Header Row */
-.cal-day-header { flex: 1; text-align: center; font-family: var(--font-ui); padding: 0.8rem; border-right: var(--border-solid); border-bottom: var(--border-solid); font-size: 0.9rem; letter-spacing: 1px; color: var(--text-muted); }
-.cal-day-header:first-child { color: var(--hero-red); } /* Sunday Red */
-.calendar-grid > div:nth-child(-n+7) { display: inline-block; float: left; width: calc(100% / 7); }
-.calendar-grid::after { content: ''; display: table; clear: both; }
+/* 7-column CSS Grid */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; border-top: var(--border-solid); border-left: var(--border-solid); }
 
-/* Body Area */
-.cal-body { display: flex; flex-wrap: wrap; width: 100%; }
-.cal-cell { width: 14.28%; border-right: var(--border-solid); border-bottom: var(--border-solid); min-height: 120px; padding: 0.5rem; position: relative; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s; }
-.cal-cell:hover { background: rgba(255,255,255,0.03); }
-.cal-cell.other-month { background: rgba(0,0,0,0.4); opacity: 0.5; }
-.cal-cell.today-cell { border: 1px solid var(--hero-red); box-shadow: inset 0 0 10px rgba(251,54,64,0.1); background: rgba(251,54,64,0.02); }
-.cal-date-label { font-family: var(--font-arcade); font-size: 1.1rem; color: var(--text-muted); position: absolute; top: 0.5rem; right: 0.5rem; }
+.cal-day-header { text-align: center; font-family: var(--font-ui); padding: 0.8rem 0.4rem; border-right: var(--border-solid); border-bottom: var(--border-solid); font-size: 0.85rem; letter-spacing: 1px; color: var(--text-muted); background: rgba(255,255,255,0.02); }
+.cal-day-header:first-child { color: var(--hero-red); }
+
+.cal-cell { border-right: var(--border-solid); border-bottom: var(--border-solid); min-height: 100px; padding: 0.4rem; position: relative; display: flex; flex-direction: column; cursor: pointer; transition: background 0.2s; }
+.cal-cell:hover { background: rgba(255,255,255,0.04); }
+.cal-cell.other-month { opacity: 0.3; }
+.cal-cell.today-cell { border: 1px solid var(--hero-red); box-shadow: inset 0 0 12px rgba(251,54,64,0.15); background: rgba(251,54,64,0.03); }
+.cal-date-label { font-family: var(--font-arcade); font-size: 1.1rem; color: var(--text-muted); text-align: right; padding: 0.2rem 0.3rem 0; }
 .today-cell .cal-date-label { color: var(--hero-red); font-weight: bold; }
 
-/* Task items inside cell */
-.cal-tasks { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 1.5rem; }
-.cal-task-item { font-family: var(--font-ui); font-size: 0.75rem; padding: 0.3rem 0.4rem; background: rgba(255,255,255,0.08); border-left: 2px solid var(--text-muted); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; position: relative; }
+.cal-tasks { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.3rem; flex: 1; }
+.cal-task-item { font-family: var(--font-ui); font-size: 0.7rem; padding: 0.2rem 0.3rem; background: rgba(255,255,255,0.08); border-left: 2px solid var(--text-muted); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .cal-task-item.active { border-left-color: var(--hero-red); background: rgba(251,54,64,0.15); }
-.cal-task-item.done { text-decoration: line-through; opacity: 0.5; }
-.cal-task-item.missed { border-left-style: dashed; border-left-color: var(--hero-red); color: var(--hero-red); opacity: 0.7; }
-
-.cal-task-item:hover { transform: scale(1.02); z-index: 5; background: var(--text-primary); color: var(--bg-deep); border-color: transparent; }
+.cal-task-item.done { text-decoration: line-through; opacity: 0.4; }
+.cal-task-item.missed { border-left-style: dashed; border-left-color: var(--hero-red); color: var(--hero-red); opacity: 0.6; }
+.cal-task-item:hover { background: var(--text-primary); color: var(--bg-deep); border-color: transparent; }
 
 /* ========================= */
 /* 5. ARCHIVE                 */

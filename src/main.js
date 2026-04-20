@@ -211,10 +211,12 @@ function renderSignalReport() {
 const monthNames = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
 function renderPlanner() {
-  const calBody = document.getElementById('calendar-body');
+  const calGrid = document.getElementById('calendar-grid');
   const calTitle = document.getElementById('cal-month-title');
-  if (!calBody || !calTitle) return;
-  calBody.innerHTML = '';
+  if (!calGrid || !calTitle) return;
+  
+  // Remove old dynamic cells (keep the 7 day headers)
+  calGrid.querySelectorAll('.cal-cell').forEach(el => el.remove());
 
   const now = new Date();
   const currentViewDate = new Date(now.getFullYear(), now.getMonth() + appState.session.calendarOffset, 1);
@@ -278,17 +280,17 @@ function renderPlanner() {
         </div>
       </div>
     `;
-    calBody.insertAdjacentHTML('beforeend', cellHtml);
+    calGrid.insertAdjacentHTML('beforeend', cellHtml);
   }
 
   bindPlannerEvents();
 }
 
 function bindPlannerEvents() {
-  const calBody = document.getElementById('calendar-body');
+  const calGrid = document.getElementById('calendar-grid');
   
   // Click on task
-  calBody.querySelectorAll('.cal-task-item').forEach(el => {
+  calGrid.querySelectorAll('.cal-task-item').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       openEditModal(el.dataset.id);
@@ -296,7 +298,7 @@ function bindPlannerEvents() {
   });
 
   // Click on empty cell
-  calBody.querySelectorAll('.cal-cell').forEach(el => {
+  calGrid.querySelectorAll('.cal-cell').forEach(el => {
     el.addEventListener('click', () => {
       openEditModal(null, el.dataset.date);
     });
