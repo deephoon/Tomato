@@ -58,7 +58,13 @@ export const appState = {
   tasks: safeLoad(LOCAL_STORAGE_KEY, DEFAULT_TASKS),
   history: safeLoad(LOCAL_HISTORY_KEY, []),
   session: { ...DEFAULT_SESSION, ...safeLoad(LOCAL_SESSION_KEY, DEFAULT_SESSION) },
+  prefs: { lang: localStorage.getItem(LANG_STORAGE_KEY) || 'en' }
 };
+
+export function saveLang() {
+  localStorage.setItem(LANG_STORAGE_KEY, appState.prefs.lang);
+}
+
 
 // Day rollover check: if todayDate doesn't match, reset pomodoro count
 (function checkDayRollover() {

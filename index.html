@@ -15,22 +15,23 @@
 
     <!-- Navigation -->
     <nav class="utility-nav">
-      <div class="nav-item interactable active-nav" id="nav-home">[ HOME ]</div>
-      <div class="nav-item interactable" id="nav-calendar">[ PLANNER ]</div>
-      <div class="nav-item interactable" id="nav-archive">[ ARCHIVE ]</div>
+      <div class="nav-item interactable lang-toggle" id="btn-lang-toggle">[ EN / KR ]</div>
+      <div class="nav-item interactable active-nav" id="nav-home" data-i18n="navHOME">[ HOME ]</div>
+      <div class="nav-item interactable" id="nav-calendar" data-i18n="navPLANNER">[ PLANNER ]</div>
+      <div class="nav-item interactable" id="nav-archive" data-i18n="navARCHIVE">[ ARCHIVE ]</div>
     </nav>
 
     <!-- 1. HOME -->
     <section id="view-home" class="view-layer active">
       <div class="hero-stage">
         <div class="today-date" id="today-date"></div>
-        <h2 class="section-title">TONIGHT'S MAIN FOCUS</h2>
+        <h2 class="section-title" data-i18n="heroTitle">TONIGHT'S MAIN FOCUS</h2>
         <div class="hero-block interactable" id="btn-ritual-start">
           <div class="block-glow"></div>
           <div class="block-content" id="home-card-content"></div>
         </div>
         <div class="pomo-dots" id="pomo-dots"></div>
-        <div class="action-prompt" id="home-prompt">>>> CLICK TO BEGIN RITUAL</div>
+        <div class="action-prompt" id="home-prompt" data-i18n="promptStart">>>> CLICK TO BEGIN RITUAL</div>
         <div class="signal-report" id="signal-report"></div>
       </div>
     </section>
@@ -38,40 +39,45 @@
     <!-- 2. FOCUS STAGE -->
     <section id="view-focus" class="view-layer hidden">
       <div class="focus-center" id="focus-center">
-        <div class="focus-mode-label" id="focus-mode-label">FOCUS</div>
+        <div class="focus-mode-label" id="focus-mode-label" data-i18n="modeFocus">FOCUS</div>
         <h1 id="time-left" class="time-pixel">25:00</h1>
-        <div id="ritual-status" class="status-indicator">SIGNAL LOCKED // AWAITING...</div>
+        <div id="ritual-status" class="status-indicator" data-i18n="signalLocked">SIGNAL LOCKED // IN PROGRESS</div>
       </div>
       <div class="focus-controls" id="focus-controls">
-        <div class="interactable action-btn" id="btn-ritual-pause">[ PAUSE ]</div>
-        <div class="interactable action-btn btn-danger" id="btn-ritual-complete">[ COMPLETE LOOP ]</div>
+        <div class="interactable action-btn" id="btn-ritual-pause" data-i18n="btnPause">[ PAUSE ]</div>
+        <div class="interactable action-btn btn-danger" id="btn-ritual-complete" data-i18n="btnComplete">[ COMPLETE LOOP ]</div>
       </div>
     </section>
 
     <!-- 3. BREAK STAGE -->
     <section id="view-break" class="view-layer hidden">
       <div class="focus-center break-mode">
-        <div class="focus-mode-label">REST CYCLE</div>
+        <div class="focus-mode-label" data-i18n="modeRest">REST CYCLE</div>
         <h1 id="break-time-left" class="time-pixel break-time">05:00</h1>
-        <div id="break-status" class="status-indicator break-status">SIGNAL RESTING // RECHARGE</div>
+        <div id="break-status" class="status-indicator break-status" data-i18n="signalResting">SIGNAL RESTING // RECHARGE</div>
       </div>
       <div class="focus-controls">
-        <div class="interactable action-btn" id="btn-skip-break">[ SKIP REST ]</div>
+        <div class="interactable action-btn" id="btn-skip-break" data-i18n="btnSkipRest">[ SKIP REST ]</div>
       </div>
     </section>
 
-    <!-- 4. PLANNER -->
+    <!-- 4. PLANNER (TIMELINE) -->
     <section id="view-calendar" class="view-layer hidden">
-      <div class="planner-container">
-        <h2 class="section-title">FOCUS SLOTS // TODAY</h2>
-        <div class="slot-grid" id="planner-grid"></div>
+      <div class="planner-container timeline-view">
+        <h2 class="section-title" data-i18n="plannerTitle">FOCUS SLOTS // TODAY</h2>
+        <div class="timeline-axis" id="planner-timeline">
+          <!-- Dynamically generated timeline hours (e.g. 09:00, 10:00) will go here -->
+        </div>
+        <div class="slot-list" id="planner-grid">
+          <!-- Timetable slots render here -->
+        </div>
       </div>
     </section>
 
     <!-- 5. ARCHIVE -->
     <section id="view-archive" class="view-layer hidden">
       <div class="archive-container">
-        <h2 class="section-title">RITUAL ARCHIVE</h2>
+        <h2 class="section-title" data-i18n="archiveTitle">RITUAL ARCHIVE</h2>
         <div id="archive-gallery"></div>
       </div>
     </section>
@@ -79,30 +85,30 @@
     <!-- EDIT MODAL -->
     <div class="modal-overlay hidden" id="edit-modal">
       <div class="modal-box">
-        <h3 class="modal-title">[ RECONFIGURE SIGNAL ]</h3>
+        <h3 class="modal-title" data-i18n="modalTitle">[ RECONFIGURE SIGNAL ]</h3>
         <div class="modal-field">
-          <label>RITUAL NAME</label>
+          <label data-i18n="labelName">RITUAL NAME</label>
           <input type="text" id="edit-title" class="modal-input" />
         </div>
         <div class="modal-row">
           <div class="modal-field">
-            <label>FOCUS (MIN)</label>
+            <label data-i18n="labelFocus">FOCUS (MIN)</label>
             <input type="number" id="edit-focus" class="modal-input" min="1" max="120" />
           </div>
           <div class="modal-field">
-            <label>BREAK (MIN)</label>
+            <label data-i18n="labelBreak">BREAK (MIN)</label>
             <input type="number" id="edit-break" class="modal-input" min="1" max="30" />
           </div>
         </div>
         <div class="modal-field">
-          <label>TIME SLOT</label>
-          <input type="text" id="edit-time" class="modal-input" placeholder="22:00" />
+          <label data-i18n="labelTime">TIME SLOT</label>
+          <input type="time" id="edit-time" class="modal-input" />
         </div>
         <input type="hidden" id="edit-task-id" />
         <div class="modal-actions">
-          <div class="interactable action-btn" id="btn-modal-save">[ CONFIRM ]</div>
-          <div class="interactable action-btn" id="btn-modal-cancel">[ ABORT ]</div>
-          <div class="interactable action-btn btn-danger" id="btn-modal-delete">[ DECOMMISSION ]</div>
+          <div class="interactable action-btn" id="btn-modal-save" data-i18n="btnConfirm">[ CONFIRM ]</div>
+          <div class="interactable action-btn" id="btn-modal-cancel" data-i18n="btnAbort">[ ABORT ]</div>
+          <div class="interactable action-btn btn-danger" id="btn-modal-delete" data-i18n="btnDelete">[ DECOMMISSION ]</div>
         </div>
       </div>
     </div>

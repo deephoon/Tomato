@@ -1,6 +1,31 @@
-import { appState, saveTasks, saveHistory, saveSession, getActiveTask, getTodayStr, getTodayDisplay } from './state.js';
+import { appState, saveTasks, saveHistory, saveSession, getActiveTask, getTodayStr, getTodayDisplay, saveLang } from './state.js';
 import { formatTime, startTimer, pauseTimer, switchMode, stopTimer } from './timer.js';
 import { init3DScene, set3DMode, triggerRitualManeuver } from './three-scene.js';
+import { dict } from './i18n.js';
+
+// ==========================================
+// I18N SYSTEM
+// ==========================================
+function t(key) {
+  const lang = appState.prefs.lang || 'en';
+  return dict[lang][key] || key;
+}
+
+function updateI18nDOM() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (el.tagName === 'INPUT' && el.type === 'button') {
+      el.value = t(key);
+    } else {
+      el.innerHTML = t(key);
+    }
+  });
+  
+  const langBtn = document.getElementById('btn-lang-toggle');
+  if (langBtn) {
+    langBtn.textContent = appState.prefs.lang === 'ko' ? '[ EN / KR* ]' : '[ EN* / KR ]';
+  }
+}
 
 // ==========================================
 // DOM REFERENCES
@@ -18,7 +43,6 @@ const navItems = {
   archive: document.getElementById('nav-archive')
 };
 
-// Home
 const elTodayDate = document.getElementById('today-date');
 const elHomeCardContent = document.getElementById('home-card-content');
 const elPomoDots = document.getElementById('pomo-dots');
@@ -26,7 +50,6 @@ const elHomePrompt = document.getElementById('home-prompt');
 const elSignalReport = document.getElementById('signal-report');
 const btnRitualStart = document.getElementById('btn-ritual-start');
 
-// Focus
 const elFocusCenter = document.getElementById('focus-center');
 const elFocusModeLabel = document.getElementById('focus-mode-label');
 const elTimeLeft = document.getElementById('time-left');
@@ -34,18 +57,13 @@ const elStatusIndicator = document.getElementById('ritual-status');
 const btnRitualPause = document.getElementById('btn-ritual-pause');
 const btnRitualComplete = document.getElementById('btn-ritual-complete');
 
-// Break
 const elBreakTimeLeft = document.getElementById('break-time-left');
 const elBreakStatus = document.getElementById('break-status');
 const btnSkipBreak = document.getElementById('btn-skip-break');
 
-// Planner
 const elPlannerGrid = document.getElementById('planner-grid');
-
-// Archive
 const elArchiveGallery = document.getElementById('archive-gallery');
 
-// Edit Modal
 const elEditModal = document.getElementById('edit-modal');
 const elEditTitle = document.getElementById('edit-title');
 const elEditFocus = document.getElementById('edit-focus');
@@ -67,9 +85,9 @@ function requestNotificationPermission() {
   }
 }
 
-function sendNotification(title, body) {
+function sendNotification(titleKey, bodyKey, extraText = '') {
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, { body, icon: '🍅' });
+    new Notification(t(titleKey), { body: `${t(bodyKey)} ${extraText}`, icon: '🍅' });
   }
 }
 
@@ -85,6 +103,9 @@ function init() {
   bindBreakControls();
   bindModal();
   bindTimerEvents();
+  
+  // Set initial i18n
+  updateI18nDOM();
   renderAll();
   showView('home');
 }
@@ -119,16 +140,15 @@ function renderAll() {
   renderHome();
   renderPlanner();
   renderArchive();
+  updateI18nDOM();
 }
 
 // ==========================================
 // HOME RENDER
 // ==========================================
 function renderHome() {
-  // Date
   if (elTodayDate) elTodayDate.textContent = getTodayDisplay();
 
-  // Hero card
   if (!elHomeCardContent) return;
   const task = appState.tasks.find(t => t.status === 'active')
             || appState.tasks.find(t => t.status === 'open')
@@ -136,25 +156,22 @@ function renderHome() {
 
   if (!task) {
     elHomeCardContent.innerHTML = `
-      <div class="block-title" style="font-size:2rem;">ALL SYSTEMS SYNCED</div>
-      <div class="block-meta">NO PENDING RITUALS &nbsp;|&nbsp; <span class="highlight-red">STANDBY</span></div>
+      <div class="block-title" style="font-size:2rem;">${t('syncState')}</div>
+      <div class="block-meta">${t('syncMeta')}</div>
     `;
     if (elHomePrompt) elHomePrompt.style.display = 'none';
   } else {
     appState.session.activeTaskId = task.id;
     appState.session.remainingSeconds = task.focusMinutes * 60;
     elHomeCardContent.innerHTML = `
-      <div class="block-id">#F_${task.id} // ${task.focusMinutes}m RITUAL</div>
+      <div class="block-id">#F_${task.id} // ${task.focusMinutes}${t('min')} RITUAL</div>
       <div class="block-title">${task.title}</div>
-      <div class="block-meta">${task.focusMinutes} MIN FOCUS / ${task.breakMinutes || 5} MIN REST &nbsp;|&nbsp; <span class="highlight-red">READY NOW</span></div>
+      <div class="block-meta">${task.focusMinutes} ${t('minFocusLabel')} / ${task.breakMinutes || 5} ${t('minRestLabel')} &nbsp;|&nbsp; <span class="highlight-red">${t('readyMeta')}</span></div>
     `;
     if (elHomePrompt) elHomePrompt.style.display = '';
   }
 
-  // Pomo dots
   renderPomoDots();
-
-  // Signal report (today's summary)
   renderSignalReport();
 }
 
@@ -184,56 +201,129 @@ function renderSignalReport() {
     return;
   }
 
-  const complete = count >= goal ? ' // DAILY RITUAL COMPLETE ✓' : '';
-  elSignalReport.innerHTML = `SIGNAL REPORT // ${count} OF ${goal} BLOCKS // TOTAL FOCUS: ${totalMinutes} MIN${complete}`;
+  const complete = count >= goal ? ` // ${t('dailyComplete')}` : '';
+  elSignalReport.innerHTML = `${t('signalReport')} // ${count} OF ${goal} ${t('blocks')} // ${t('totalFocus')}: ${totalMinutes} ${t('min')}${complete}`;
 }
 
 // ==========================================
-// PLANNER RENDER
+// PLANNER RENDER (With Timeline & D&D)
 // ==========================================
+let draggedTaskId = null;
+
 function renderPlanner() {
   if (!elPlannerGrid) return;
   elPlannerGrid.innerHTML = '';
 
-  // Sort by order
   const sorted = [...appState.tasks].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   sorted.forEach(task => {
     let cls = 'open';
-    let prefix = 'OPEN: ';
+    let prefix = t('stateOpen');
     const time = task.timeLabel || '--:--';
 
-    if (task.status === 'done')   { cls = 'completed'; prefix = 'DONE: '; }
-    if (task.status === 'active') { cls = 'active-slot'; prefix = 'ARMED: '; }
-    if (task.status === 'missed') { cls = 'missed'; prefix = 'MISSED: '; }
+    if (task.status === 'done')   { cls = 'completed'; prefix = t('stateDone'); }
+    if (task.status === 'active') { cls = 'active-slot'; prefix = t('stateArmed'); }
+    if (task.status === 'missed') { cls = 'missed'; prefix = t('stateMissed'); }
 
     elPlannerGrid.insertAdjacentHTML('beforeend', `
-      <div class="slot ${cls} interactable" data-id="${task.id}">
+      <div class="slot ${cls} interactable draggable-slot" draggable="true" data-id="${task.id}">
         <span class="slot-time">${time}</span>
         <span class="slot-task">[ ${prefix}${task.title} ]</span>
         <span class="slot-duration">${task.focusMinutes}m</span>
+        <div class="slot-actions">
+          <div class="quick-btn btn-edit" data-id="${task.id}">MOD</div>
+          <div class="quick-btn danger btn-del" data-id="${task.id}">DEL</div>
+        </div>
       </div>
     `);
   });
 
-  // Empty slot CTA
   elPlannerGrid.insertAdjacentHTML('beforeend', `
     <div class="slot empty interactable" id="btn-add-task">
       <span class="slot-time"></span>
-      <span class="slot-task">+ DROP NEXT RITUAL</span>
+      <span class="slot-task">${t('dropNextRitual')}</span>
     </div>
   `);
 
-  // Bind slot clicks
-  elPlannerGrid.querySelectorAll('.slot[data-id]').forEach(el => {
-    el.addEventListener('click', () => openEditModal(el.dataset.id));
+  bindPlannerEvents();
+}
+
+function bindPlannerEvents() {
+  // Quick Actions
+  elPlannerGrid.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(e.target.dataset.id); });
   });
+  elPlannerGrid.querySelectorAll('.btn-del').forEach(btn => {
+    btn.addEventListener('click', (e) => { 
+      e.stopPropagation(); 
+      if (confirm(t('confirmDelete'))) {
+        appState.tasks = appState.tasks.filter(t => t.id !== e.target.dataset.id);
+        saveTasks();
+        renderAll();
+      }
+    });
+  });
+
   const addBtn = document.getElementById('btn-add-task');
-  if (addBtn) addBtn.onclick = () => openEditModal(null); // null = new task
+  if (addBtn) addBtn.onclick = () => openEditModal(null);
+
+  // Drag and Drop Logic
+  const slots = elPlannerGrid.querySelectorAll('.draggable-slot');
+  slots.forEach(slot => {
+    slot.addEventListener('dragstart', (e) => {
+      draggedTaskId = slot.dataset.id;
+      slot.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    slot.addEventListener('dragend', () => {
+      slot.classList.remove('dragging');
+      draggedTaskId = null;
+    });
+  });
+
+  elPlannerGrid.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(elPlannerGrid, e.clientY);
+    const dragging = document.querySelector('.dragging');
+    if (dragging) {
+      if (afterElement == null) {
+        elPlannerGrid.insertBefore(dragging, addBtn);
+      } else {
+        elPlannerGrid.insertBefore(dragging, afterElement);
+      }
+    }
+  });
+
+  elPlannerGrid.addEventListener('drop', (e) => {
+    e.preventDefault();
+    // Recompute order based on DOM position
+    const domSlots = elPlannerGrid.querySelectorAll('.draggable-slot');
+    domSlots.forEach((slot, index) => {
+      const id = slot.dataset.id;
+      const t = appState.tasks.find(x => x.id === id);
+      if (t) t.order = index;
+    });
+    saveTasks();
+    renderAll();
+  });
+}
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.draggable-slot:not(.dragging)')];
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
 // ==========================================
-// ARCHIVE RENDER (date-grouped)
+// ARCHIVE RENDER
 // ==========================================
 function renderArchive() {
   if (!elArchiveGallery) return;
@@ -244,14 +334,13 @@ function renderArchive() {
       <div class="stamp-row" style="justify-content:center;">
         <div class="stamp empty-stamp interactable">
           <div class="stamp-icon">+</div>
-          <div class="stamp-title">AWAIT</div>
+          <div class="stamp-title">${t('await')}</div>
         </div>
       </div>
     `;
     return;
   }
 
-  // Group by date
   const groups = {};
   appState.history.forEach(h => {
     const date = h.date || 'UNKNOWN';
@@ -259,7 +348,6 @@ function renderArchive() {
     groups[date].push(h);
   });
 
-  // Sort dates descending (newest first)
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
   sortedDates.forEach(date => {
@@ -267,7 +355,7 @@ function renderArchive() {
     const totalMin = items.reduce((s, h) => s + (h.focusMinutes || 0), 0);
 
     let groupHTML = `<div class="archive-date-group">`;
-    groupHTML += `<div class="archive-date-header">${date} <span>${items.length} RITUALS // ${totalMin} MIN</span></div>`;
+    groupHTML += `<div class="archive-date-header">${date} <span>${items.length} ${t('rituals')} // ${totalMin} ${t('min')}</span></div>`;
     groupHTML += `<div class="stamp-row">`;
 
     items.forEach((h, i) => {
@@ -287,12 +375,11 @@ function renderArchive() {
     elArchiveGallery.insertAdjacentHTML('beforeend', groupHTML);
   });
 
-  // Always add an empty slot at end
   elArchiveGallery.insertAdjacentHTML('beforeend', `
     <div class="stamp-row" style="justify-content:center; margin-top:1rem;">
       <div class="stamp empty-stamp interactable">
         <div class="stamp-icon">+</div>
-        <div class="stamp-title">AWAIT</div>
+        <div class="stamp-title">${t('await')}</div>
       </div>
     </div>
   `);
@@ -303,9 +390,7 @@ function renderArchive() {
 // ==========================================
 function openEditModal(taskId) {
   if (!elEditModal) return;
-
   if (taskId) {
-    // Edit existing
     const task = appState.tasks.find(t => t.id === taskId);
     if (!task) return;
     elEditTitle.value = task.title;
@@ -315,7 +400,6 @@ function openEditModal(taskId) {
     elEditTaskId.value = task.id;
     if (btnModalDelete) btnModalDelete.style.display = '';
   } else {
-    // New task
     elEditTitle.value = '';
     elEditFocus.value = 25;
     elEditBreak.value = 5;
@@ -323,7 +407,6 @@ function openEditModal(taskId) {
     elEditTaskId.value = '';
     if (btnModalDelete) btnModalDelete.style.display = 'none';
   }
-
   elEditModal.classList.remove('hidden');
 }
 
@@ -334,13 +417,12 @@ function closeEditModal() {
 function bindModal() {
   if (btnModalSave) btnModalSave.onclick = () => {
     const id = elEditTaskId.value;
-    const title = (elEditTitle.value || 'UNTITLED').toUpperCase().trim();
+    const title = (elEditTitle.value || t('untitled')).toUpperCase().trim();
     const focusMin = Math.max(1, Math.min(120, parseInt(elEditFocus.value) || 25));
     const breakMin = Math.max(1, Math.min(30, parseInt(elEditBreak.value) || 5));
     const timeLabel = elEditTime.value.trim() || '--:--';
 
     if (id) {
-      // Update existing
       const task = appState.tasks.find(t => t.id === id);
       if (task) {
         task.title = title;
@@ -349,7 +431,6 @@ function bindModal() {
         task.timeLabel = timeLabel;
       }
     } else {
-      // Create new
       appState.tasks.push({
         id: 't_' + Date.now().toString().slice(-6),
         title,
@@ -370,7 +451,7 @@ function bindModal() {
   if (btnModalDelete) btnModalDelete.onclick = () => {
     const id = elEditTaskId.value;
     if (!id) return;
-    if (!confirm('DECOMMISSION this ritual signal?')) return;
+    if (!confirm(t('confirmDelete'))) return;
     appState.tasks = appState.tasks.filter(t => t.id !== id);
     saveTasks();
     closeEditModal();
@@ -385,6 +466,15 @@ function bindNav() {
   if (navItems.home) navItems.home.onclick = () => { showView('home'); renderAll(); };
   if (navItems.calendar) navItems.calendar.onclick = () => showView('calendar');
   if (navItems.archive) navItems.archive.onclick = () => showView('archive');
+
+  const btnLang = document.getElementById('btn-lang-toggle');
+  if (btnLang) {
+    btnLang.onclick = () => {
+      appState.prefs.lang = appState.prefs.lang === 'ko' ? 'en' : 'ko';
+      saveLang();
+      renderAll();
+    };
+  }
 }
 
 function bindHome() {
@@ -405,13 +495,13 @@ function bindFocusControls() {
     btnRitualPause.onclick = () => {
       if (appState.session.isRunning) {
         pauseTimer();
-        btnRitualPause.textContent = '[ RESUME ]';
-        if (elStatusIndicator) elStatusIndicator.textContent = 'SIGNAL PAUSED // AWAITING...';
+        btnRitualPause.textContent = t('btnResume');
+        if (elStatusIndicator) elStatusIndicator.textContent = t('signalPaused');
         if (elFocusCenter) elFocusCenter.classList.remove('tension');
       } else {
         startTimer();
-        btnRitualPause.textContent = '[ PAUSE ]';
-        if (elStatusIndicator) elStatusIndicator.textContent = 'SIGNAL LOCKED // IN PROGRESS';
+        btnRitualPause.textContent = t('btnPause');
+        if (elStatusIndicator) elStatusIndicator.textContent = t('signalLocked');
       }
     };
   }
@@ -447,7 +537,6 @@ function completeFocusSession() {
     task.status = 'done';
     saveTasks();
 
-    // Push to history with date
     appState.history.push({
       ...task,
       completedAt: Date.now(),
@@ -455,16 +544,12 @@ function completeFocusSession() {
     });
     saveHistory();
 
-    // Increment pomo count
     appState.session.pomodoroCount = (appState.session.pomodoroCount || 0) + 1;
     saveSession();
   }
 
-  // Notification
   const taskTitle = task ? task.title : 'RITUAL';
-  sendNotification('SIGNAL COMPLETE', `${taskTitle} // FOCUS SESSION DONE`);
-
-  // Transition to break
+  sendNotification('notifFocusDoneTitle', 'notifFocusDoneBody', `// ${taskTitle}`);
   enterBreakMode();
 }
 
@@ -475,25 +560,19 @@ function enterBreakMode() {
 
   const isLong = appState.session.pomodoroCount > 0 && appState.session.pomodoroCount % 4 === 0;
   if (elBreakStatus) {
-    elBreakStatus.textContent = isLong
-      ? 'LONG REST // 4 BLOCKS COMPLETE // RECHARGE'
-      : 'SIGNAL RESTING // RECHARGE';
+    elBreakStatus.textContent = isLong ? t('longRest') : t('signalResting');
   }
 
   startTimer();
 }
 
 function endBreak() {
-  // Notification
-  sendNotification('REST COMPLETE', 'READY TO LOCK NEXT SIGNAL');
-
-  // Go back to home, pick next task
+  sendNotification('notifRestDoneTitle', 'notifRestDoneBody');
   const nextTask = appState.tasks.find(t => t.status === 'active' || t.status === 'open');
   if (nextTask) {
     nextTask.status = 'active';
     saveTasks();
   }
-
   renderAll();
   showView('home');
   switchMode('idle');
@@ -516,16 +595,15 @@ function updateTimerHUD() {
 
   if (mode === 'focus' && currentView === 'focus') {
     if (elTimeLeft) elTimeLeft.textContent = formatTime(remaining);
-    if (elFocusModeLabel) elFocusModeLabel.textContent = 'FOCUS';
+    if (elFocusModeLabel) elFocusModeLabel.textContent = t('modeFocus');
 
-    // Tension UX at ≤3 min
     if (appState.session.isRunning && remaining <= 180 && remaining > 0) {
       if (elFocusCenter) elFocusCenter.classList.add('tension');
-      if (elStatusIndicator) elStatusIndicator.textContent = 'FINAL STRETCH // CLOSING LOOP...';
+      if (elStatusIndicator) elStatusIndicator.textContent = t('finalStretch');
     } else if (remaining > 180) {
       if (elFocusCenter) elFocusCenter.classList.remove('tension');
       if (elStatusIndicator && appState.session.isRunning) {
-        elStatusIndicator.textContent = 'SIGNAL LOCKED // IN PROGRESS';
+        elStatusIndicator.textContent = t('signalLocked');
       }
     }
   }

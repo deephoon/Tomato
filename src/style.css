@@ -90,29 +90,53 @@ html, body { width: 100vw; height: 100vh; background: var(--bg-deep); color: var
 .break-status { color: var(--break-green); }
 
 /* ========================= */
-/* 4. PLANNER                 */
+/* 4. PLANNER (TIMELINE)      */
 /* ========================= */
-.planner-container { width: 550px; max-width: 90vw; }
-.slot-grid { display: flex; flex-direction: column; gap: 0.8rem; }
-.slot { padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; border: var(--border-solid); cursor: pointer; transition: all 0.2s; }
-.slot-time { font-family: var(--font-arcade); font-size: 1.3rem; color: var(--text-muted); width: 65px; flex-shrink: 0; text-align: right; }
+.planner-container { width: 550px; max-width: 90vw; position: relative; margin-top: 2rem; max-height: 70vh; overflow-y: auto; padding-right: 10px; }
+.planner-container::-webkit-scrollbar { width: 4px; }
+.planner-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* The vertical axis line */
+.timeline-axis { position: absolute; left: 75px; top: 0; bottom: 0; width: 1px; background: var(--line-subtle); z-index: 1; border-left: 1px dashed rgba(255,255,255,0.05); }
+
+.slot-list { display: flex; flex-direction: column; gap: 0.8rem; position: relative; z-index: 2; padding-top: 1rem; padding-bottom: 2rem; }
+.slot { padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; border: var(--border-solid); cursor: pointer; transition: all 0.2s; position: relative; background: rgba(5,5,5,0.9); backdrop-filter: blur(4px); }
+.slot.dragging { opacity: 0.4; border-color: var(--hero-red); }
+
+/* Circle on the timeline */
+.slot::before { content: ''; position: absolute; left: 71px; top: 50%; transform: translateY(-50%); width: 9px; height: 9px; background: var(--bg-deep); border: 2px solid var(--text-muted); z-index: 3; transition: all 0.2s; }
+.slot.active-slot::before { border-color: var(--hero-red); background: var(--hero-red); box-shadow: 0 0 10px var(--hero-red-glow); }
+.slot.completed::before { border-color: rgba(255,255,255,0.2); background: transparent; }
+.slot.empty::before { display: none; }
+
+.slot-time { font-family: var(--font-arcade); font-size: 1.3rem; color: var(--text-muted); width: 65px; flex-shrink: 0; text-align: right; margin-right: 15px; }
 .slot-task { font-family: var(--font-ui); font-size: 0.95rem; letter-spacing: 1px; flex: 1; display: flex; align-items: center; gap: 0.8rem; color: var(--text-muted); }
 .slot-duration { font-family: var(--font-arcade); font-size: 0.85rem; color: var(--text-muted); opacity: 0.5; margin-left: auto; }
 
+/* Quick Actions (Hover) */
+.slot-actions { display: none; margin-left: auto; gap: 0.5rem; }
+.slot:hover .slot-actions { display: flex; }
+.slot:hover .slot-duration { display: none; }
+.quick-btn { font-family: var(--font-ui); font-size: 0.75rem; color: var(--bg-deep); background: var(--text-muted); padding: 0.2rem 0.5rem; cursor: pointer; letter-spacing: 1px; border: 1px solid transparent; }
+.quick-btn:hover { background: var(--text-primary); }
+.quick-btn.danger { background: rgba(251,54,64,0.2); color: var(--hero-red); border-color: var(--hero-red); }
+.quick-btn.danger:hover { background: var(--hero-red); color: white; }
+
+/* Slot States */
 .active-slot { border: 2px solid var(--hero-red); box-shadow: 0 0 15px rgba(251,54,64,0.3); }
-.active-slot .slot-time { color: var(--text-primary); }
+.active-slot .slot-time { color: var(--text-primary); font-weight: bold; }
 .active-slot .slot-task { color: var(--text-primary); font-weight: bold; }
 
 .completed { border-color: rgba(255,255,255,0.06); }
-.completed .slot-time, .completed .slot-task { color: rgba(255,255,255,0.2); }
+.completed .slot-time, .completed .slot-task { color: rgba(255,255,255,0.2); text-decoration: line-through rgba(255,255,255,0.1); }
 
-.missed { border: 1px solid rgba(251,54,64,0.3); }
+.missed { border: 1px dashed rgba(251,54,64,0.3); }
 .missed .slot-time { color: rgba(251,54,64,0.5); }
 .missed .slot-task { color: var(--text-muted); text-decoration: line-through rgba(251,54,64,0.4); }
 
 .open .slot-task { color: rgba(244,241,234,0.6); }
 
-.empty { border: var(--line-dashed); }
+.empty { border: var(--line-dashed); background: transparent; }
 .empty .slot-task { color: var(--text-muted); width: 100%; justify-content: center; }
 .empty:hover { border-color: var(--text-primary); }
 .empty:hover .slot-task { color: var(--text-primary); }
