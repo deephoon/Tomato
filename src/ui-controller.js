@@ -231,17 +231,17 @@ function deleteTask(id) {
 }
 
 // ==========================================
-// GSAP BUTTON SPRING ANIMATIONS
+// GSAP BUTTON WEIGHTED TACTILE ANIMATIONS
 // ==========================================
 function attachSpring(btn) {
   btn.addEventListener('pointerdown', () => {
-    gsap.to(btn, { scale: 0.92, duration: 0.15, ease: "power2.in" });
+    gsap.to(btn, { scale: 0.96, duration: 0.1, ease: "power2.inOut" });
   });
   btn.addEventListener('pointerup', () => {
-    gsap.to(btn, { scale: 1, duration: 0.6, ease: "elastic.out(1, 0.4)" });
+    gsap.to(btn, { scale: 1, duration: 0.5, ease: "power3.out" });
   });
   btn.addEventListener('pointerleave', () => {
-    gsap.to(btn, { scale: 1, duration: 0.4, ease: "power2.out" });
+    gsap.to(btn, { scale: 1, duration: 0.3, ease: "power2.out" });
   });
 }
 

@@ -90,18 +90,31 @@ export function t(key) {
 
 // --- Storage Keys ---
 const LOCAL_STORAGE_KEY = 'tomato_os_tasks';
+const LOCAL_HISTORY_KEY = 'tomato_os_history';
 const LANG_STORAGE_KEY = 'tomato_lang';
 
 // --- Default Tasks ---
 const DEFAULT_TASKS = [
-  { id: '1', title: 'Deep Work', focusMinutes: 25, breakMinutes: 5, themeColor1: '#ff007f', themeColor2: '#7000ff', glassColor: '#ff2a2a' },
-  { id: '2', title: 'Brainstorm', focusMinutes: 45, breakMinutes: 10, themeColor1: '#00f0ff', themeColor2: '#00ff66', glassColor: '#2a88ff' },
-  { id: '3', title: 'Quick Task', focusMinutes: 15, breakMinutes: 3, themeColor1: '#ffaa00', themeColor2: '#ff0055', glassColor: '#ff9900' }
+  { id: 't_1', title: 'DEEP SYSTEM DESIGN', focusMinutes: 25, status: 'active', timeLabel: '22:00' }
 ];
+
+// --- Persistence Security Core ---
+function safeLoad(key, defaultData) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw || raw === 'undefined' || raw === 'null') return defaultData;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultData;
+  } catch (err) {
+    console.error('Storage wipe due to parsing error', err);
+    return defaultData;
+  }
+}
 
 // --- Global App State ---
 export const appState = {
-  tasks: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || DEFAULT_TASKS,
+  tasks: safeLoad(LOCAL_STORAGE_KEY, DEFAULT_TASKS),
+  history: safeLoad(LOCAL_HISTORY_KEY, []),
   session: {
     activeTaskId: null,
     mode: 'idle',       // idle | focus | break
@@ -117,6 +130,10 @@ export const appState = {
 // --- Persistence ---
 export function saveTasks() {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appState.tasks));
+}
+
+export function saveHistory() {
+  localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(appState.history));
 }
 
 export function saveLang() {

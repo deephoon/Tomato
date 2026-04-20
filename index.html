@@ -1,164 +1,80 @@
-<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#050505" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Tomato — Focus OS</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/style.css" />
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
-        });
-      }
-    </script>
-    <!-- three.js and gsap resolved via npm/node_modules -->
-  </head>
-  <body>
-    <!-- Layer 0: Brutalist 2D Tomato Background -->
-    <div id="brutalist-bg">
-      <div class="brutalist-tomato">
-        <div class="stem"></div>
-      </div>
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tomato Final — Pixel Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=VT323&family=DotGothic16&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+  <script>
+    window.addEventListener('error', function(e) {
+      document.body.innerHTML += '<div style="position:absolute; top:0; left:0; width:100%; color:red; padding:2rem; font-family:monospace; z-index:9999; font-weight:bold; background:rgba(0,0,0,0.9); pointer-events:none;">JS CRASH: ' + e.message + '<br>' + e.filename + ':' + e.lineno + '</div>';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      document.body.innerHTML += '<div style="position:absolute; top:0; left:0; width:100%; color:orange; padding:2rem; font-family:monospace; z-index:9999; font-weight:bold; background:rgba(0,0,0,0.9); pointer-events:none;">PROMISE CRASH: ' + e.reason + '</div>';
+    });
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="app-overlay">
     
-    <!-- Layer 1: Main HUD -->
-    <div id="app">
-      <header class="hud-header">
-        <div class="hud-top-left">
-          <div class="brand">TOMATO v2.6</div>
-          <div id="hud-status" class="status-cycle" data-i18n="workCycle">WORK CYCLE</div>
-          <div id="current-task-title" class="task-title" data-i18n="selectTask">작업 선택</div>
-        </div>
-        <div class="hud-top-right">
-          <button id="tasks-btn" class="glass-btn hud-menu" data-i18n="tasks">TASKS</button>
-          <button id="lang-toggle-btn" class="glass-btn hud-menu">
-            <span id="lang-label">EN</span>
-          </button>
-        </div>
-      </header>
+    <nav class="utility-nav">
+      <div class="nav-item interactable active-nav" id="nav-home">[ HOME ]</div>
+      <div class="nav-item interactable" id="nav-calendar">[ PLANNER ]</div>
+      <div class="nav-item interactable" id="nav-archive">[ ARCHIVE ]</div>
+    </nav>
 
-      <main class="timer-container">
-        <div class="timer-display">
-          <div id="time-left" class="time-left">00:00</div>
-        </div>
-      </main>
-
-      <footer class="hud-footer controls">
-        <button id="play-pause-btn" class="glass-btn primary-box" aria-label="Play/Pause">
-          <span id="play-icon" data-i18n="start">START</span>
-          <span id="pause-icon" class="hidden" data-i18n="pause">PAUSE</span>
-        </button>
-        <button id="stop-btn" class="glass-btn secondary-box" aria-label="Stop" style="display: none;">
-          <span data-i18n="reset">RESET</span>
-        </button>
-      </footer>
-    </div>
-    
-    <!-- Layer 2: Glassmorphism Overlays -->
-    <!-- Task Sheet (Bottom Sheet) -->
-    <div id="task-sheet" class="bottom-sheet" style="display:none;">
-      <div class="sheet-backdrop"></div>
-      <div class="sheet-content">
-        <div class="sheet-drag-handle"></div>
-        <div class="sheet-header">
-          <h2 data-i18n="tasks">작업 목록</h2>
-          <button id="close-sheet-btn" class="icon-btn"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-        </div>
-        
-        <div id="task-list-view">
-          <ul id="sheet-task-list" class="task-list">
-            <!-- Rendered via JS -->
-          </ul>
-          <button id="add-new-task-btn" class="glass-btn full-width" data-i18n="newTask">+ 새 작업</button>
-
-          <!-- AI Task Slicing Section -->
-          <div class="ai-slice-section">
-            <button id="ai-slice-btn" class="glass-btn full-width ai-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-              <span data-i18n="aiSlice">AI로 분해하기</span>
-            </button>
+    <!-- 1. HOME -->
+    <section id="view-home" class="view-layer active">
+      <div class="hero-stage">
+        <h2 class="section-title">TONIGHT'S MAIN FOCUS</h2>
+        <div class="hero-block interactable" id="btn-ritual-start">
+          <div class="block-glow"></div>
+          <div class="block-content" id="home-card-content">
+            <!-- Dynamic Injection -->
           </div>
         </div>
+        <div class="action-prompt">>>> CLICK TO BEGIN RITUAL</div>
+      </div>
+    </section>
 
-        <div id="task-form-view" style="display:none;">
-          <div class="setting-group">
-            <label data-i18n="taskName">작업 이름</label>
-            <input type="text" id="form-task-name" placeholder="E.g., Deep Work" />
-          </div>
-          <div class="setting-row">
-            <div class="setting-group half">
-              <label data-i18n="workMin">작업 (분)</label>
-              <input type="number" id="form-work-min" min="1" max="120" value="25" />
-            </div>
-            <div class="setting-group half">
-              <label data-i18n="breakMin">휴식 (분)</label>
-              <input type="number" id="form-break-min" min="1" max="60" value="5" />
-            </div>
-          </div>
-          <div class="setting-row">
-            <div class="setting-group half">
-              <label data-i18n="themeColor1">테마 색상 1</label>
-              <input type="color" id="form-color1" value="#FF007F" />
-            </div>
-            <div class="setting-group half">
-              <label data-i18n="themeColor2">테마 색상 2</label>
-              <input type="color" id="form-color2" value="#7000FF" />
-            </div>
-          </div>
-          <div class="setting-row">
-            <div class="setting-group" style="width: 100%;">
-              <label data-i18n="glassColor">유리 본체 색상</label>
-              <input type="color" id="form-color3" value="#FF3B30" />
-            </div>
-          </div>
-          <div class="form-actions">
-            <button id="form-cancel-btn" class="glass-btn form-secondary" data-i18n="cancel">취소</button>
-            <button id="form-save-btn" class="glass-btn form-primary" data-i18n="saveTask">저장</button>
-          </div>
+    <!-- 2. FOCUS STAGE -->
+    <section id="view-focus" class="view-layer hidden">
+      <div class="focus-center">
+        <h1 id="time-left" class="time-pixel">00:00</h1>
+        <div id="ritual-status" class="status-indicator">SIGNAL LOCKED // AWAITING...</div>
+      </div>
+      <div class="focus-controls">
+        <div class="interactable action-btn" id="btn-ritual-pause">[ PAUSE ]</div>
+        <div class="interactable action-btn btn-danger hidden" id="btn-ritual-complete">[ COMPLETE LOOP ]</div>
+      </div>
+    </section>
+
+    <!-- 3. CALENDAR -->
+    <section id="view-calendar" class="view-layer hidden">
+      <div class="planner-container">
+        <h2 class="section-title">FOCUS SLOTS // TODAY</h2>
+        <div class="slot-grid" id="planner-grid">
+          <!-- Planner Dynamic Render Target -->
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Interruption Modal -->
-    <div id="interruption-modal" class="modal" style="display:none;">
-      <div class="modal-content text-center">
-        <h2 class="transition-title" data-i18n="paused">일시 정지</h2>
-        <p class="transition-message" data-i18n="interruptionMsg">집중 흐름을 이어가거나, 잠시 쉴 수 있습니다.</p>
-        <div class="transition-actions">
-          <button id="btn-resume" class="glass-btn full-width mb-2" data-i18n="resume">계속 진행</button>
-          
-          <div class="btn-row">
-            <button id="btn-reset-timer" class="glass-btn full-width secondary-style" data-i18n="resetTimer" style="padding: 0 1rem;">타이머 초기화</button>
-            <button id="btn-edit-task" class="glass-btn full-width secondary-style" data-i18n="editTask" style="padding: 0 1rem;">작업 설정</button>
-          </div>
-
-          <button id="btn-start-break-now" class="glass-btn full-width secondary-style mb-2" data-i18n="startBreakNow">지금 바로 휴식</button>
-          <button id="btn-finish-early" class="glass-btn full-width muted-style" data-i18n="finishEarly">일찍 완료</button>
+    <!-- 4. ARCHIVE -->
+    <section id="view-archive" class="view-layer hidden">
+      <div class="archive-container">
+        <h2 class="section-title">RITUAL ARCHIVE</h2>
+        <div class="stamp-gallery" id="archive-gallery">
+          <!-- Archive Dynamic Render Target -->
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Transition Modal -->
-    <div id="transition-modal" class="modal" style="display:none;">
-      <div class="modal-content text-center">
-        <h2 id="transition-title" class="transition-title">시간 종료</h2>
-        <p id="transition-message" class="transition-message">훌륭한 집중이었어요.</p>
-        <div class="transition-actions">
-          <button id="btn-start-break" class="glass-btn full-width mb-2" data-i18n="startBreak">휴식 시작</button>
-          <button id="btn-extend-min" class="glass-btn full-width secondary-style mb-2" data-i18n="extend1min">+ 1분 연장</button>
-          <button id="btn-finish-session" class="glass-btn full-width muted-style" data-i18n="finishSession">세션 종료</button>
-        </div>
-      </div>
-    </div>
+  </div>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+  <script type="module" src="/src/main.js"></script>
+</body>
 </html>
