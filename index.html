@@ -437,8 +437,8 @@
       <p id="auth-subtitle" data-i18n="authSignInSubtitle">Sign in to load your personal Tomato workspace.</p>
 
       <label class="auth-field">
-        <span data-i18n="authUserId">USER ID</span>
-        <input id="auth-handle" type="text" autocomplete="username" spellcheck="false" required />
+        <span data-i18n="authUserId">EMAIL</span>
+        <input id="auth-email" type="email" autocomplete="username" spellcheck="false" required />
       </label>
 
       <label class="auth-field" id="auth-display-field">
@@ -452,7 +452,7 @@
       </label>
 
       <ul class="auth-rules" id="auth-rules">
-        <li data-rule="handle" data-i18n="authRuleHandle">User ID: 3-24 lowercase letters, numbers, dot, underscore, or hyphen.</li>
+        <li data-rule="handle" data-i18n="authRuleHandle">Email: Must be a valid email address.</li>
         <li data-rule="password-length" data-i18n="authRulePasswordLength">Password: at least 8 characters.</li>
         <li data-rule="password-mix" data-i18n="authRulePasswordMix">Password must include letters and numbers.</li>
       </ul>

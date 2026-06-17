@@ -1,8 +1,9 @@
 // ==========================================
 // TIMER LOGIC — Date.now() Based Precision
 // ==========================================
-import { appState, getActiveTask, saveSession, saveHistory, saveTasks } from './state.js';
+import { appState, saveTasks, saveSession, getActiveTask, appendHistoryItem } from './state.js';
 import { generateId } from './utils/id.js';
+import { executeCommand } from './services/command.service.js';
 
 let timerInterval = null;
 
@@ -46,6 +47,7 @@ export function startFocus(task) {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 100);
   saveSession();
+  executeCommand('startFocus', { taskId: task ? task.id : null, mode: 'focus' });
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
@@ -63,6 +65,7 @@ export function pauseSession() {
   clearInterval(timerInterval);
   timerInterval = null;
   saveSession();
+  executeCommand('pauseSession');
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
@@ -81,6 +84,7 @@ export function resumeSession() {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 100);
   saveSession();
+  executeCommand('resumeSession');
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
@@ -133,7 +137,7 @@ export function completeFocus(options = {}) {
       completionKey: completionKey
     };
 
-    appState.history.push(historyItem);
+    appendHistoryItem(historyItem);
 
     // Update original task
     if (task) {
@@ -143,7 +147,8 @@ export function completeFocus(options = {}) {
     
     appState.session.pomodoroCount += 1;
     appState.session.completedHistoryId = historyId;
-    saveHistory();
+    saveSession();
+    executeCommand('completeFocus', { historyItem });
   }
 
   // Stop current ticking
@@ -177,6 +182,7 @@ export function startBreak() {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 100);
   saveSession();
+  executeCommand('startBreak');
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 

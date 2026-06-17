@@ -1,14 +1,26 @@
 import { appState, saveTasks, saveHistory, saveSession, getActiveTask, saveLang, sendWidgetControl, claimLegacyDataForCurrentUser, reloadForCurrentUser } from './state.js';
 import { getTodayStr, getTodayDisplay } from './utils/dateTime.js';
+import { initSyncService } from './services/sync.service.js';
+import { processQueue } from './services/offlineQueue.service.js';
+import { generateArchiveInsight } from './services/archiveInsight.service.js';
 import { recoverSession } from './services/sessionRecovery.service.js';
 import { formatTime, startFocus, pauseSession, resumeSession, completeFocus, startBreak, skipBreak, resetSession } from './timer.js';
 import { init3DScene, set3DMode, triggerRitualManeuver } from './three-scene.js';
 import { dict } from './i18n.js';
-import { openWidget, goToMainPage, isWidget, isTauri, beginWindowDrag, beginWindowResize, hideWidgetSelf, bindWidgetWindowControl } from './widget.js';
-import { createUser, signIn, signOut, hasUsers } from './auth.js';
+import { signUpWithEmail, signInWithEmail, signOut } from './supabase/auth.service.js';
 import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
+
+window.isWidget = () => false;
+function isWidget() { return false; }
+window.isTauri = () => false;
+function isTauri() { return false; }
+function beginWindowDrag() {}
+function beginWindowResize() {}
+function hideWidgetSelf() {}
+function bindWidgetWindowControl() {}
+function goToMainPage() {}
 import {
   getTotalFocusMinutes,
   getCurrentStreak,
@@ -102,6 +114,30 @@ function sendNotification(titleKey, bodyKey, extraText = '') {
 // ==========================================
 // INIT
 // ==========================================
+
+window.addEventListener('tomato:auth-ready', (e) => {
+  updateAuthUI();
+  if (appState.auth.user) {
+    recoverSession();
+    renderAll();
+    updateFocusHUD();
+  }
+});
+
+window.addEventListener('tomato:cloud-loaded', () => {
+  updateAuthUI();
+  recoverSession();
+  renderAll();
+  updateFocusHUD();
+});
+
+window.addEventListener('tomato:userchange', () => {
+  updateAuthUI();
+  recoverSession();
+  renderAll();
+  updateFocusHUD();
+});
+
 function init() {
   const widgetCtx = isWidget();
   if (widgetCtx) {
@@ -114,8 +150,10 @@ function init() {
   if (!widgetCtx) {
     try { init3DScene(); } catch(e) { console.error('3D scene failed:', e); }
   }
+  initSyncService();
+  processQueue();
   requestNotificationPermission();
-  if (!appState.auth.user) authMode = hasUsers() ? 'signin' : 'signup';
+  if (!appState.auth.user) authMode = 'signin';
   bindAuth();
   bindNav();
   bindTabBar();
@@ -180,33 +218,168 @@ function bindWidgetDrag() {
   }
 }
 
-// Create / remove the desktop widget.
-//  - Browser main:  [ ◰ WIDGET ] button  → ask the running widget to show itself
-//  - Widget window: × close button       → hide itself (app keeps running)
+let pipWindow = null;
+
 function bindWidgetControls() {
-  bindWidgetWindowControl();              // widget listens for show/hide (Tauri only)
-  const closeBtn = $('widget-close');
-  if (closeBtn) closeBtn.onclick = () => hideWidgetSelf();
   const toggleBtn = $('btn-widget-toggle');
   if (toggleBtn) toggleBtn.onclick = requestWidgetOpen;
 }
 
-function requestWidgetOpen() {
-  if (isTauri()) openWidget();
-  else sendWidgetControl('show');
+async function requestWidgetOpen() {
+  if (!('documentPictureInPicture' in window)) {
+    alert(t('pipNotSupported') || "이 브라우저는 위젯(PiP) 기능을 지원하지 않습니다. (최신 Chrome/Edge 사용 권장)");
+    return;
+  }
+  
+  if (pipWindow) {
+    pipWindow.focus();
+    return;
+  }
+  
+  try {
+    pipWindow = await window.documentPictureInPicture.requestWindow({
+      width: 320,
+      height: 200,
+    });
+    
+    // Copy stylesheets
+    [...document.styleSheets].forEach((styleSheet) => {
+      try {
+        const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+        const style = document.createElement('style');
+        style.textContent = cssRules;
+        pipWindow.document.head.appendChild(style);
+      } catch (e) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = styleSheet.type;
+        link.media = styleSheet.media;
+        link.href = styleSheet.href;
+        pipWindow.document.head.appendChild(link);
+      }
+    });
+
+    // Custom PiP Styles (Media-Art Edition)
+    const globalStyle = document.createElement('style');
+    globalStyle.textContent = `
+      body {
+        margin: 0; padding: 0;
+        background: var(--bg-deep, #000F08);
+        color: var(--text-primary, #F4F1EA);
+        font-family: var(--font-pixel, "Silkscreen", "Galmuri11", monospace);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        height: 100vh; width: 100vw; box-sizing: border-box;
+        user-select: none;
+        overflow: hidden;
+      }
+      .pip-container {
+        position: relative;
+        width: calc(100% - 24px);
+        height: calc(100% - 24px);
+        background: var(--bg-stage, #050505);
+        border: var(--border-solid, 1px solid rgba(255,255,255,0.14));
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 20;
+      }
+      .pip-header { 
+        font-size: var(--fs-meta, 12px); 
+        color: var(--hero-red, #fb3640); 
+        letter-spacing: var(--ls-label, 0.2em); 
+        margin-bottom: var(--s-2, 8px); 
+        text-transform: uppercase;
+      }
+      .pip-header.break { color: var(--break-green, #2ecc71); }
+      .pip-clock { 
+        font-size: 64px; 
+        line-height: var(--lh-tight, 1);
+        font-weight: normal; 
+        color: var(--hero-red, #fb3640); 
+        margin-bottom: var(--s-6, 24px); 
+        text-shadow: 0 0 24px var(--hero-red-glow, rgba(251,54,64,0.35)); 
+      }
+      .pip-clock.break { 
+        color: var(--break-green, #2ecc71); 
+        text-shadow: 0 0 24px var(--break-green-glow, rgba(46,204,113,0.3)); 
+      }
+      .pip-controls { 
+        display: flex; gap: var(--s-3, 12px); 
+      }
+      .btn-pip { 
+        background: transparent; 
+        border: 1px solid var(--hairline-3, rgba(255,255,255,0.22)); 
+        color: var(--text-muted, rgba(244,241,234,0.72)); 
+        cursor: pointer; 
+        padding: 6px 16px; 
+        font-size: var(--fs-btn, 13px);
+        font-family: var(--font-pixel, inherit);
+        letter-spacing: var(--ls-pixel-normal, 0.08em);
+        transition: all 0.2s;
+        text-transform: uppercase;
+      }
+      .btn-pip:hover { 
+        background: rgba(255,255,255,0.05); 
+        border-color: var(--text-primary, #F4F1EA); 
+        color: var(--text-primary);
+      }
+    `;
+    pipWindow.document.head.appendChild(globalStyle);
+
+    // Create DOM
+    pipWindow.document.body.innerHTML = `
+      <div class="vignette"></div>
+      <div class="scanlines"></div>
+      <div class="grain"></div>
+      <div class="pip-container">
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
+        <div class="pip-header" id="pip-mode">FOCUS</div>
+        <div class="pip-clock" id="pip-clock">--:--</div>
+        <div class="pip-controls">
+          <button class="btn-pip" id="btn-pip-play">PAUSE</button>
+          <button class="btn-pip" id="btn-pip-complete">DONE</button>
+          <button class="btn-pip btn-close" id="btn-pip-close">✕</button>
+        </div>
+      </div>
+    `;
+
+    // Bind events
+    pipWindow.document.getElementById('btn-pip-play').onclick = () => {
+      const mode = appState.session.mode;
+      if (mode === 'idle') {
+        const task = appState.tasks.find(t => t.id === appState.session.activeTaskId) || pickHomeTask();
+        if (task) startTaskRitual(task);
+        else startQuickRitual();
+      } else {
+        if (appState.session.isRunning) pauseSession();
+        else resumeSession();
+      }
+    };
+    pipWindow.document.getElementById('btn-pip-complete').onclick = () => {
+       if (appState.session.mode === 'focus') completeFocus();
+       else if (appState.session.mode === 'break') completeBreak();
+    };
+    pipWindow.document.getElementById('btn-pip-close').onclick = () => {
+      if (pipWindow) pipWindow.close();
+    };
+
+    pipWindow.addEventListener("pagehide", () => {
+      pipWindow = null;
+      updateFocusHUD(); 
+    });
+
+    // Initial render
+    updateFocusHUD();
+  } catch (err) {
+    console.error("Failed to open PiP window:", err);
+  }
 }
 
-// The full browser app answers a widget's "return to main" handshake so the widget
-// knows a live tab already exists and shouldn't open a duplicate. (Bringing the tab
-// truly to front is browser-restricted; window.focus() is best-effort.)
 function bindMainFocusBridge() {
-  if (!import.meta.hot || isWidget()) return;
-  import.meta.hot.on('tomato:sync', (data) => {
-    if (!data || data.type !== 'request-main-focus') return;
-    try { window.focus(); } catch (e) {}
-    if (currentView !== 'home') showView('home');
-    import.meta.hot.send('tomato:sync', { type: 'main-here', ts: Date.now() });
-  });
+  // Removed Tauri focus bridge
 }
 
 // ==========================================
@@ -217,13 +390,13 @@ function bindAuth() {
   const switchBtn = $('btn-auth-switch');
   const logoutBtn = $('btn-auth-logout');
   const langBtn = $('btn-auth-lang-toggle');
-  const handleInput = $('auth-handle');
+  const emailInput = $('auth-email');
   const passwordInput = $('auth-password');
 
   if (form) {
     form.addEventListener('submit', handleAuthSubmit);
   }
-  if (handleInput) handleInput.addEventListener('input', updateAuthRules);
+  if (emailInput) emailInput.addEventListener('input', updateAuthRules);
   if (passwordInput) passwordInput.addEventListener('input', updateAuthRules);
   if (switchBtn) {
     switchBtn.onclick = () => {
@@ -259,7 +432,7 @@ async function handleAuthSubmit(event) {
   event.preventDefault();
   const message = $('auth-message');
   const submitBtn = $('btn-auth-submit');
-  const handle = ($('auth-handle')?.value || '').trim();
+  const email = ($('auth-email')?.value || '').trim();
   const displayName = ($('auth-display')?.value || '').trim();
   const password = $('auth-password')?.value || '';
 
@@ -273,14 +446,15 @@ async function handleAuthSubmit(event) {
   }
 
   try {
-    const validation = validateAuthInput(handle, password);
+    const validation = validateAuthInput(email, password);
     if (authMode === 'signup' && !validation.ok) {
       throw new Error(validation.messageKey);
     }
+    
     if (authMode === 'signup') {
-      await createUser({ handle, displayName, password });
+      await signUpWithEmail(email, password, displayName);
     } else {
-      await signIn({ handle, password });
+      await signInWithEmail(email, password);
     }
     claimLegacyDataForCurrentUser();
     reloadForCurrentUser();
@@ -315,55 +489,82 @@ function updateAuthUI() {
   const message = $('auth-message');
   const passwordInput = $('auth-password');
 
+  // If user is logged in but cloud state isn't loaded yet, show loading
+  if (user && !appState.isCloudLoaded) {
+    document.body.classList.add('auth-locked');
+    if (gate) gate.classList.remove('hidden');
+    if (title) title.textContent = "SYNCING...";
+    if (subtitle) subtitle.textContent = "Loading cloud workspace...";
+    if (displayField) displayField.style.display = 'none';
+    if (submitBtn) submitBtn.style.display = 'none';
+    if (switchBtn) switchBtn.style.display = 'none';
+    if (passwordInput) passwordInput.parentElement.style.display = 'none';
+    const emailInput = $('auth-email');
+    if (emailInput) emailInput.parentElement.style.display = 'none';
+    const authRules = $('auth-rules');
+    if (authRules) authRules.style.display = 'none';
+    const authMessage = $('auth-message');
+    if (authMessage) authMessage.style.display = 'none';
+    return;
+  }
+
+  // Normal logic
   document.body.classList.toggle('auth-locked', !user);
   if (gate) gate.classList.toggle('hidden', !!user);
   if (badge) {
-    badge.textContent = user ? `[ ${user.displayName || user.handle} // LOCAL ]` : '[ NO USER ]';
+    badge.textContent = user ? `[ ${user.displayName || user.email.split('@')[0]} // CLOUD ]` : t('authNoUser');
     badge.style.display = user ? '' : 'none';
   }
   if (logoutBtn) logoutBtn.style.display = user ? '' : 'none';
 
-  if (displayField) displayField.style.display = authMode === 'signup' ? '' : 'none';
-  if (title) title.textContent = authMode === 'signup' ? t('authCreateTitle') : t('authSignInTitle');
-  if (subtitle) {
-    subtitle.textContent = authMode === 'signup'
-      ? t('authCreateSubtitle')
-      : t('authSignInSubtitle');
+  if (!user) {
+    if (displayField) displayField.style.display = authMode === 'signup' ? '' : 'none';
+    if (title) title.textContent = authMode === 'signup' ? t('authCreateTitle') : t('authSignInTitle');
+    if (subtitle) {
+      subtitle.textContent = authMode === 'signup'
+        ? t('authCreateSubtitle')
+        : t('authSignInSubtitle');
+    }
+    if (submitBtn) {
+      submitBtn.style.display = '';
+      submitBtn.textContent = authMode === 'signup' ? t('authCreateButton') : t('authSignInButton');
+    }
+    if (switchBtn) {
+      switchBtn.style.display = '';
+      switchBtn.textContent = authMode === 'signup'
+        ? t('authSwitchToSignIn')
+        : t('authSwitchToCreate');
+    }
+    if (passwordInput) {
+      passwordInput.parentElement.style.display = '';
+      passwordInput.setAttribute('autocomplete', authMode === 'signup' ? 'new-password' : 'current-password');
+    }
+    const emailInput = $('auth-email');
+    if (emailInput) emailInput.parentElement.style.display = '';
   }
-  if (submitBtn) submitBtn.textContent = authMode === 'signup' ? t('authCreateButton') : t('authSignInButton');
-  if (switchBtn) {
-    switchBtn.textContent = authMode === 'signup'
-      ? t('authSwitchToSignIn')
-      : t('authSwitchToCreate');
-  }
-  if (passwordInput) {
-    passwordInput.setAttribute('autocomplete', authMode === 'signup' ? 'new-password' : 'current-password');
-  }
-  if (message && user) {
-    message.textContent = '';
-    message.classList.remove('error', 'ok');
-  }
-  updateAuthRules();
 }
 
-function validateAuthInput(handle, password) {
-  const normalizedHandle = String(handle || '').trim().toLowerCase();
-  const cleanPassword = String(password || '');
-  const handleOk = /^[a-z0-9._-]{3,24}$/.test(normalizedHandle);
-  const lengthOk = cleanPassword.length >= 8;
-  const mixOk = /[a-zA-Z]/.test(cleanPassword) && /[0-9]/.test(cleanPassword);
 
-  if (!handleOk) return { ok: false, messageKey: 'authErrorHandleRule', handleOk, lengthOk, mixOk };
-  if (!lengthOk) return { ok: false, messageKey: 'authErrorPasswordLength', handleOk, lengthOk, mixOk };
-  if (!mixOk) return { ok: false, messageKey: 'authErrorPasswordMix', handleOk, lengthOk, mixOk };
-  return { ok: true, handleOk, lengthOk, mixOk };
+function validateAuthInput(email, password) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  return {
+    handleOk: emailRegex.test(email),
+    lengthOk: password.length >= 8,
+    mixOk: hasLetter && hasNumber,
+    ok: emailRegex.test(email) && password.length >= 8 && hasLetter && hasNumber,
+    messageKey: !emailRegex.test(email) ? 'authErrorHandleRule' :
+                password.length < 8 ? 'authErrorPasswordLength' :
+                !(hasLetter && hasNumber) ? 'authErrorPasswordMix' : null
+  };
 }
 
 function updateAuthRules() {
-  const handle = $('auth-handle')?.value || '';
+  const email = $('auth-email')?.value || '';
   const password = $('auth-password')?.value || '';
-  const validation = validateAuthInput(handle, password);
-  const map = {
+  const validation = validateAuthInput(email, password);
+    const map = {
     handle: validation.handleOk,
     'password-length': validation.lengthOk,
     'password-mix': validation.mixOk
@@ -1227,7 +1428,7 @@ function renderArchiveStats() {
   `;
 }
 
-function renderArchiveReview() {
+async function renderArchiveReview() {
   const el = $('archive-review');
   if (!el) return;
   const history = appState.history;
@@ -1242,7 +1443,6 @@ function renderArchiveReview() {
   }
 
   const today = getTodayStr();
-  // historyInsight.service — actualSeconds-accurate insights.
   const best = getBestFocusDay(history);
   const longest = getLongestFocusSession(history);
   const calmest = getLeastInterruptedSession(history);
@@ -1258,60 +1458,40 @@ function renderArchiveReview() {
         <span>${t('archiveThisWeek')}: <b>${weekMin}${t('min')}</b></span>
         <span>${t('archiveAverage')}: <b>${avgMin}${t('min')}</b></span>
       </div>
+      <div id="ai-insight-container" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--accent); color: var(--fg); font-family: 'JetBrains Mono', monospace; font-size: 0.85em; white-space: pre-wrap;">[ ANALYZING SIGNAL... ]</div>
     </div>
     <div class="archive-review-cards">
       <div class="archive-review-card">
         <span>${t('archiveBestDay')}</span>
         <b>${best && best.date ? best.date.slice(5).replace('-', '.') : '--'}</b>
-        <small>${best && best.date ? `${best.minutes}${t('min')}` : '--'}</small>
       </div>
       <div class="archive-review-card">
-        <span>${t('archiveLongest')}</span>
-        <b>${longest ? `${longestMin}${t('min')}` : '--'}</b>
-        <small>${longest ? longest.title || t('untitled') : '--'}</small>
+        <span>${t('archiveLongestSession')}</span>
+        <b>${longestMin}${t('min')}</b>
       </div>
       <div class="archive-review-card">
-        <span>${t('archiveFocused')}</span>
-        <b>${calmest ? `${calmest.pauseCount || 0}×` : '--'}</b>
-        <small>${calmest ? calmest.title || t('untitled') : '--'}</small>
+        <span>${t('archiveCalmest')}</span>
+        <b>${calmest ? calmest.title : '--'}</b>
       </div>
     </div>
   `;
-}
 
-function bindArchiveFilters() {
-  document.querySelectorAll('#filter-chips .filter-chip').forEach(chip => {
-    chip.onclick = () => {
-      document.querySelectorAll('#filter-chips .filter-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      currentArchiveFilter = chip.dataset.filter;
-      renderArchiveGrid();
-    };
-  });
-}
-
-function filterHistory(list) {
-  switch (currentArchiveFilter) {
-    case '25': return list.filter(h => (h.focusMinutes || 25) <= 25);
-    case '50': return list.filter(h => (h.focusMinutes || 25) > 25);
-    case 'streak': {
-      const streakDates = new Set();
-      const d = new Date();
-      const datesWith = new Set(appState.history.map(h => h.date));
-      while (datesWith.has(fmtDate(d))) {
-        streakDates.add(fmtDate(d));
-        d.setDate(d.getDate() - 1);
-      }
-      return list.filter(h => streakDates.has(h.date));
+  if (appState.prefs && appState.prefs.archiveInsightEnabled) {
+    const insight = await generateArchiveInsight();
+    const insightEl = $('ai-insight-container');
+    if (insightEl) {
+      insightEl.textContent = insight;
     }
-    default: return list;
+  } else {
+    const insightEl = $('ai-insight-container');
+    if (insightEl) insightEl.style.display = 'none';
   }
 }
 
 function renderArchiveGrid() {
   const el = $('archive-gallery');
   if (!el) return;
-  const filtered = filterHistory(appState.history);
+  const filtered = appState.history || [];
 
   if (filtered.length === 0) {
     el.innerHTML = `
@@ -1951,6 +2131,45 @@ function updateFocusHUD() {
       elBreak.textContent = formatTime(remaining);
       elBreak.classList.toggle('heavy', running);
       elBreak.classList.toggle('echo', !running);
+    }
+  }
+
+  // Sync to PiP Window if open
+  if (pipWindow) {
+    const pipClock = pipWindow.document.getElementById('pip-clock');
+    const pipMode = pipWindow.document.getElementById('pip-mode');
+    const pipPlay = pipWindow.document.getElementById('btn-pip-play');
+    const pipComplete = pipWindow.document.getElementById('btn-pip-complete');
+
+    if (pipClock) {
+      if (mode === 'idle') {
+        pipClock.textContent = '--:--';
+        pipClock.classList.remove('break');
+      } else {
+        pipClock.textContent = formatTime(remaining);
+        pipClock.classList.toggle('break', mode === 'break');
+      }
+    }
+    if (pipMode) {
+      if (mode === 'focus') {
+        const taskTitle = task ? task.title : '';
+        pipMode.textContent = taskTitle ? `${t('tabFocus')}: ${taskTitle}` : t('tabFocus');
+      } else if (mode === 'break') {
+        pipMode.textContent = t('tabBreak') || 'BREAK';
+      } else {
+        pipMode.textContent = t('heroStandby') || 'STANDBY';
+      }
+    }
+    if (pipPlay) {
+      if (mode === 'idle') {
+        pipPlay.textContent = t('btnStart') || 'START';
+      } else {
+        pipPlay.textContent = running ? (t('btnPause') || 'PAUSE') : (t('btnResume') || 'RESUME');
+      }
+    }
+    if (pipComplete) {
+      pipComplete.style.display = mode === 'idle' ? 'none' : '';
+      pipComplete.textContent = t('btnComplete') || 'DONE';
     }
   }
 }

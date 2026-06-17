@@ -1,7 +1,4 @@
-// ==========================================
-// STATE MANAGEMENT — Single Source of Truth
-// ==========================================
-import { getCurrentUser } from './auth.js';
+import { getCurrentUser } from './supabase/client.js';
 import * as taskRepo from './repositories/task.repository.js';
 import * as historyRepo from './repositories/history.repository.js';
 import * as sessionRepo from './repositories/session.repository.js';
@@ -10,25 +7,62 @@ import { getTodayStr } from './utils/dateTime.js';
 
 let syncedWidgetUser = null;
 
-function getRuntimeUser() {
-  return getCurrentUser() || syncedWidgetUser;
+export function getRuntimeUser() {
+  return appState.auth.user || syncedWidgetUser;
 }
 
 // --- Global App State ---
 export const appState = {
-  auth: { user: getCurrentUser() },
+  auth: { user: null },
   tasks: [],
   history: [],
-  session: {},
+  session: sessionRepo.getLocalCache(null),
   aiTasks: [], // AI proposed tasks
-  prefs: {}
+  prefs: prefRepo.getLocalCache(null),
+  isCloudLoaded: false
 };
 
-// Initialize State
-appState.tasks = loadTasks();
-appState.history = loadHistory();
-appState.session = loadSession();
-appState.prefs = loadPreferences();
+// Start initialization
+(async () => {
+  const user = await getCurrentUser();
+  appState.auth.user = user;
+  if (user) {
+    await loadCloudState();
+  }
+  window.dispatchEvent(new CustomEvent('tomato:auth-ready', { detail: { user } }));
+})();
+
+export async function loadCloudState() {
+  const user = appState.auth.user;
+  if (!user) return;
+  
+  appState.isCloudLoaded = false;
+  
+  // Load cached first so UI can paint something immediately if it wants
+  appState.session = sessionRepo.getLocalCache(user.id);
+  appState.prefs = await prefRepo.getPreferences(user.id);
+  
+  try {
+    // Fetch from Supabase
+    const [tasks, history, session] = await Promise.all([
+      taskRepo.getTasks(user.id),
+      historyRepo.getHistory(user.id),
+      sessionRepo.getSession(user.id) // This will fetch from DB and fallback to cache
+    ]);
+    
+    appState.tasks = tasks;
+    appState.history = history;
+    appState.session = session;
+  } catch (err) {
+    console.error("Cloud sync failed, falling back to local cache:", err);
+    // On failure, we should still allow the user to use the app in offline mode.
+    // In a real app, we'd maybe show a warning banner.
+  } finally {
+    appState.isCloudLoaded = true;
+    checkDayRollover();
+    window.dispatchEvent(new CustomEvent('tomato:cloud-loaded'));
+  }
+}
 
 export function saveLang() {
   const user = getRuntimeUser();
@@ -37,70 +71,18 @@ export function saveLang() {
   }
 }
 
-function loadTasks() {
-  const user = getRuntimeUser();
-  return user ? taskRepo.getTasks(user.id) : [];
-}
-
-function loadHistory() {
-  const user = getRuntimeUser();
-  return user ? historyRepo.getHistory(user.id) : [];
-}
-
-function loadSession() {
-  const user = getRuntimeUser();
-  return user ? sessionRepo.getSession(user.id) : sessionRepo.getSession(null);
-}
-
-function loadPreferences() {
-  const user = getRuntimeUser();
-  return user ? prefRepo.getPreferences(user.id) : prefRepo.getPreferences(null);
-}
-
-// Legacy migration logic
-const LEGACY_STORAGE_KEY = 'tomato_os_tasks';
-const LEGACY_HISTORY_KEY = 'tomato_os_history';
-const LEGACY_SESSION_KEY = 'tomato_os_session';
-const LEGACY_CLAIM_KEY = 'tomato_legacy_claimed_by';
-
-export function claimLegacyDataForCurrentUser() {
-  const user = getCurrentUser();
-  if (!user || localStorage.getItem(LEGACY_CLAIM_KEY)) return false;
-  let copied = false;
-  
-  const legacyTasks = localStorage.getItem(LEGACY_STORAGE_KEY);
-  if (legacyTasks && taskRepo.getTasks(user.id).length === 0) {
-    taskRepo.saveTasks(user.id, JSON.parse(legacyTasks));
-    copied = true;
-  }
-  
-  const legacyHistory = localStorage.getItem(LEGACY_HISTORY_KEY);
-  if (legacyHistory && historyRepo.getHistory(user.id).length === 0) {
-    historyRepo.saveHistory(user.id, JSON.parse(legacyHistory));
-    copied = true;
-  }
-  
-  const legacySession = localStorage.getItem(LEGACY_SESSION_KEY);
-  if (legacySession) {
-    // Session is often overwritten, but we can copy it if we want
-    const parsed = JSON.parse(legacySession);
-    sessionRepo.saveSession(user.id, parsed);
-    copied = true;
-  }
-
-  if (copied) localStorage.setItem(LEGACY_CLAIM_KEY, user.id);
-  return copied;
-}
-
-export function reloadForCurrentUser() {
+export async function reloadForCurrentUser() {
   syncedWidgetUser = null;
-  appState.auth.user = getCurrentUser();
-  appState.tasks = loadTasks();
-  appState.history = loadHistory();
-  appState.session = loadSession();
-  appState.prefs = loadPreferences();
+  appState.auth.user = await getCurrentUser();
   appState.aiTasks = [];
-  checkDayRollover();
+  if (appState.auth.user) {
+    await loadCloudState();
+  } else {
+    appState.tasks = [];
+    appState.history = [];
+    appState.session = sessionRepo.getLocalCache(null);
+    appState.prefs = prefRepo.getLocalCache(null);
+  }
   window.dispatchEvent(new CustomEvent('tomato:userchange'));
 }
 
@@ -123,17 +105,41 @@ function checkDayRollover() {
 }
 
 // --- Persistence ---
+// These are now fire-and-forget async wrapper functions
 export function saveTasks() {
   const user = getRuntimeUser();
   if (!user) return;
-  taskRepo.saveTasks(user.id, appState.tasks);
+  taskRepo.saveTasks(user.id, appState.tasks).catch(e => console.error(e));
   broadcastSync('tasks', appState.tasks);
+}
+
+export function appendHistoryItem(item) {
+  appState.history.push(item);
+  const user = getRuntimeUser();
+  if (user) {
+    historyRepo.appendHistory(user.id, item).catch(e => console.error(e));
+  }
+  broadcastSync('history-append', item);
+}
+
+export function updateHistoryReflection(historyId, reflection) {
+  const item = appState.history.find(h => h.id === historyId);
+  if (item) {
+    item.reflection = reflection;
+    const user = getRuntimeUser();
+    if (user) {
+      historyRepo.updateHistoryItem(user.id, historyId, { reflection }).catch(e => console.error(e));
+    }
+    broadcastSync('history-update', { id: historyId, reflection });
+  }
 }
 
 export function saveHistory() {
   const user = getRuntimeUser();
   if (!user) return;
-  historyRepo.saveHistory(user.id, appState.history);
+  // History is mostly append-only, but if we need to sync full array we can.
+  // Actually, saveHistory here is just local cache update if needed.
+  historyRepo.saveHistory(user.id, appState.history).catch(e => console.error(e));
   broadcastSync('history', appState.history);
 }
 
@@ -160,7 +166,7 @@ export function saveSession() {
     completionKey: appState.session.completionKey || null,
     completedHistoryId: appState.session.completedHistoryId || null
   };
-  sessionRepo.saveSession(user.id, payload);
+  sessionRepo.saveSession(user.id, payload).catch(e => console.error(e));
   broadcastSync('session', payload);
 }
 
@@ -177,14 +183,14 @@ const syncChannel = (typeof BroadcastChannel !== 'undefined')
   : null;
 
 function broadcastSync(type, payload) {
-  const user = getRuntimeUser() || appState.auth.user;
+  const user = getRuntimeUser();
   const msg = { type, payload, src: CLIENT_ID, userId: user ? user.id : null, user };
   if (syncChannel) syncChannel.postMessage(msg);
   if (import.meta.hot) import.meta.hot.send('tomato:sync', msg);
 }
 
 export function sendWidgetControl(action) {
-  const user = getRuntimeUser() || appState.auth.user;
+  const user = getRuntimeUser();
   const msg = {
     type: 'widget-control',
     action,
@@ -227,18 +233,24 @@ function applySync(data) {
   let changed = false;
   if (data.type === 'tasks') {
     appState.tasks = data.payload;
-    const user = getRuntimeUser();
-    if (user) taskRepo.saveTasks(user.id, appState.tasks);
     changed = true;
   } else if (data.type === 'history') {
     appState.history = data.payload;
-    const user = getRuntimeUser();
-    if (user) historyRepo.saveHistory(user.id, appState.history);
     changed = true;
+  } else if (data.type === 'history-append') {
+    if (!appState.history.some(h => h.completionKey === data.payload.completionKey)) {
+      appState.history.push(data.payload);
+      changed = true;
+    }
+  } else if (data.type === 'history-update') {
+    const item = appState.history.find(h => h.id === data.payload.id);
+    if (item) {
+      item.reflection = data.payload.reflection;
+      changed = true;
+    }
+
   } else if (data.type === 'session') {
     Object.assign(appState.session, data.payload);
-    const user = getRuntimeUser();
-    if (user) sessionRepo.saveSession(user.id, data.payload);
     changed = true;
   }
   if (changed) {
@@ -249,4 +261,39 @@ function applySync(data) {
 if (syncChannel) syncChannel.onmessage = (ev) => applySync(ev.data);
 if (import.meta.hot) import.meta.hot.on('tomato:sync', (data) => applySync(data));
 
-checkDayRollover();
+// Legacy migration logic
+const LEGACY_STORAGE_KEY = 'tomato_os_tasks';
+const LEGACY_HISTORY_KEY = 'tomato_os_history';
+const LEGACY_SESSION_KEY = 'tomato_os_session';
+const LEGACY_CLAIM_KEY = 'tomato_legacy_claimed_by';
+
+export function claimLegacyDataForCurrentUser() {
+  const user = getRuntimeUser();
+  if (!user || localStorage.getItem(LEGACY_CLAIM_KEY)) return false;
+  let copied = false;
+  
+  const legacyTasks = localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (legacyTasks && appState.tasks.length === 0) {
+    appState.tasks = JSON.parse(legacyTasks);
+    saveTasks();
+    copied = true;
+  }
+  
+  const legacyHistory = localStorage.getItem(LEGACY_HISTORY_KEY);
+  if (legacyHistory && appState.history.length === 0) {
+    appState.history = JSON.parse(legacyHistory);
+    saveHistory();
+    copied = true;
+  }
+  
+  const legacySession = localStorage.getItem(LEGACY_SESSION_KEY);
+  if (legacySession) {
+    const parsed = JSON.parse(legacySession);
+    appState.session = { ...appState.session, ...parsed };
+    saveSession();
+    copied = true;
+  }
+
+  if (copied) localStorage.setItem(LEGACY_CLAIM_KEY, user.id);
+  return copied;
+}
