@@ -1,490 +1,114 @@
-# 🍅 Tomato — Focus Ritual Tool
+# Tomato — 개인화 집중 리추얼 서비스 (Media-Art Edition)
 
-> A pixel-art media-art focus ritual application with 3D WebGL stage, built with Vite + Three.js + GSAP.  
-> Not a productivity dashboard. A digital ritual stage.
+> **Night × Imperial Ritual Interface**
+> 단순한 포모도로 타이머를 넘어, 집중을 하나의 '의식(Ritual)'으로 승화시키는 개인화 집중 관리 도구. 
 
-![Version](https://img.shields.io/badge/version-v11.0-FB3640?style=flat-square&labelColor=000F08)
-![Three.js](https://img.shields.io/badge/Three.js-WebGL-white?style=flat-square&labelColor=000F08)
-![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&labelColor=000F08)
-![GSAP](https://img.shields.io/badge/GSAP-3.14-88CE02?style=flat-square&labelColor=000F08)
-![PWA](https://img.shields.io/badge/PWA-Supported-5A0FC8?style=flat-square&labelColor=000F08)
+Tomato는 사용자가 오늘의 집중 블록을 만들고, 실행하고, 기록을 회고하는 연속적인 흐름을 설계하는 서비스입니다. 현재 프로토타입은 **Vanilla JS + Three.js + GSAP** 기반의 Web SPA와 **Tauri 위젯** 구조를 결합한 형태로, 로컬 프로필과 개인 기록 아카이브를 갖춘 제품형 구조로 발전하고 있습니다.
 
-**[한국어 버전은 아래에 있습니다 ↓](#-tomato--포커스-리추얼-툴)**
+특히 이번 버전(V10)부터는 **미디어아트 전시물**과 같은 감각적 피드백(Night × Imperial 테마, 3D Monolith 배경 등)을 더하여 사용자에게 더 깊은 몰입감을 제공합니다.
 
 ---
 
-## Concept
+## 1. 제품 개요 및 철학
 
-Tomato is a **Focus Ritual Tool** — not a standard Pomodoro timer.
-
-Focus is not a task to manage but a **ritual to enter**. The visual language draws from pixel-art media installations, digital sculpture, and tactical signal aesthetics. Each session is a **stage performance** — beginning → signal lock → tension sequence → ceremonial completion.
-
----
-
-## Features
-
-| Feature | Description |
-|---|---|
-| **5-View Navigation** | HOME · PLAN · FOCUS · ARCHIVE · NEW via bottom tab bar |
-| **3D Background Stage** | Three.js pixelated monolith + horizon grid + particle rain, reactive to app state |
-| **Split-Pane Planner** | Monthly calendar (left) + planning console (right) with drag scheduling |
-| **Pomodoro Timer** | Date.now()-precision countdown with focus/break cycles and long break every 4 blocks |
-| **AI Task Subdivision** | Intelligent task decomposition into phased focus blocks |
-| **Archive Memory Vault** | Completed rituals become collectible stamp cards with signal intensity metrics |
-| **Ritual Detail Sheet** | Full session report with re-execute and planner cross-reference |
-| **i18n (EN / KO)** | Full bilingual support with live toggle |
-| **PWA** | Offline-capable via Service Worker with installable manifest |
-| **Browser Notifications** | Focus/break completion alerts |
-| **Day Rollover** | Auto-detects date change, marks incomplete tasks as missed |
-
----
-
-## Design Language
-
-| Principle | Description |
-|---|---|
-| **Night × Imperial** | Deep black base (`#000F08`) with Imperial Red (`#FB3640`) as the singular reactive signal |
-| **Pixel-Art Media Art** | Low-resolution digital sculpture stage, not retro game aesthetics |
-| **Behavioral UX** | Every screen drives one action. Empty states invite, not just wait |
-| **Signal-Driven Motion** | Animation is slow, geometric, state-controlled — never decorative |
-
-### Color System
-
-| Token | Hex | Role |
-|---|---|---|
-| Deep Base | `#000F08` | Scene background, void |
-| Stage Black | `#050505` | Monolith core, surfaces |
-| Surface Black | `#0F0F0F` | Cards, panels |
-| Hero Red | `#FB3640` | Signal event — active state, armed slot, tension |
-| Break Green | `#2ECC71` | Rest cycle indicator |
-| Soft White | `#F4F1EA` | Typography, wireframe glints |
-
-### Typography
-
-| Font | Usage |
-|---|---|
-| `Silkscreen` | EN/NUM display — section headers, clock digits |
-| `Galmuri11/14` | KO pixel font — Korean UI text |
-| `JetBrains Mono` | Metadata, timestamps, monospaced copy |
-
----
-
-## Architecture
-
+### 1.1. 핵심 목표
+Tomato의 궁극적인 목표는 사용자의 업무 흐름을 끊김 없이 이어주는 것입니다.
+```text
+로그인 → 오늘 집중 계획(Plan) → 집중 실행(Focus) → 휴식(Break) → 기록 저장(Archive) → 회고 및 다음 작업 시작
 ```
-Tomato/
-├── index.html              # App shell — 5-view SPA with all semantic sections
-├── package.json            # Vite 8 + Three.js 0.183 + GSAP 3.14
-│
-├── src/
-│   ├── main.js             # View router, render engine, all interactions (1,387 lines)
-│   ├── state.js            # Single source of truth, localStorage persistence (113 lines)
-│   ├── timer.js            # Date.now()-accurate countdown engine (90 lines)
-│   ├── three-scene.js      # 3D pixel media art background stage (253 lines)
-│   ├── i18n.js             # EN/KO dictionary (269 lines)
-│   └── style.css           # Full design system — CSS custom properties (1,644 lines)
-│
-├── public/
-│   ├── manifest.json       # PWA manifest
-│   └── sw.js               # Service Worker (network-first with cache fallback)
-│
-└── ref/                    # Design reference files (not used in production)
-    ├── app.jsx             # Original React prototype reference
-    ├── stage.js            # 3D stage reference
-    ├── styles.css          # Style reference
-    └── Tomato.html         # Original HTML reference
-```
+단순 작업 목록이 아닌, 세션 하나하나를 명확한 "시작과 종료가 있는 기록 단위"로 다루어, 집중의 리듬을 관리합니다.
 
-### Module Dependency Graph
-
-```mermaid
-graph LR
-  A[index.html] --> B[main.js]
-  B --> C[state.js]
-  B --> D[timer.js]
-  B --> E[three-scene.js]
-  B --> F[i18n.js]
-  D --> C
-  E --> G[Three.js]
-  E --> H[GSAP]
-```
+### 1.2. 디자인 철학 (Night × Imperial)
+* **미디어아트 감성 (3D & GSAP)**: Three.js를 활용하여 픽셀화된 3D 모노리스(Monolith) 배경과 입자 필드를 렌더링. 사용자의 상태(idle, running, paused)에 따라 배경이 반응합니다.
+* **Pixel HUD & Functional UI 분리**:
+  * **Pixel HUD**: 시계, 제목, CTA 버튼 등은 픽셀 폰트(Silkscreen)를 사용하여 시스템/모니터링 장치의 감성을 전달.
+  * **Functional UI**: 작업 목록, 메타데이터 등은 고정폭 폰트(JetBrains Mono)로 실질적 가독성을 보장.
+* **Hero Red 원칙**: 액센트 컬러(`#FB3640`)는 "신호, 활성, 에너지"에만 제한적으로 사용하여 긴장감을 유지합니다. 
 
 ---
 
-## 5-View System
+## 2. 주요 기능 및 아키텍처 현황
 
-### `HOME` — Action Stage
-- Hero card with tonight's main focus task, next-up preview, and pentagon SVG overlay
-- Signal bar showing pomodoro block progress (e.g. `2/4 BLOCKS`)
-- Full-size pixel clock with state-based styling (echo/heavy)
-- Right column panels: **Focus Slots // Today**, **Signal Stats** (today/week/streak/total), **Recent Rituals** strip
-- CTA: `[ BEGIN RITUAL ]` + `[ OPEN PLANNER ]`
+### 2.1. 전체 아키텍처
+* **Front-end**: Vanilla JavaScript ES Modules, Vite 8
+* **Visuals/Animation**: Three.js (3D Background), GSAP (Transitions)
+* **Desktop App**: Tauri 2.0 (Rust)
+* **Storage**: 현재 브라우저 `localStorage` 기반 동작 (향후 Supabase 이관 준비)
 
-### `PLAN` — Split-Pane Calendar Planner
-- **Left pane**: Monthly grid calendar with task indicators, today highlight, and date selection
-- **Right pane**: Planning console with selected date display, scheduled task list, unscheduled queue, task detail card, and AI plan output
-- Double-click any calendar cell to create a new task
-- AI plan apply/regenerate workflow
+### 2.2. 로그인과 개인화 (Auth & Profile)
+* `auth.js`를 통한 로컬 사용자 프로필 시스템 구현.
+* 비밀번호는 평문 저장이 아닌 **PBKDF2-SHA256 해싱** 방식을 적용.
+* 계정별로 `tasks`, `history`, `session` 스토리지 키를 완전히 분리하여 다중 사용자 환경 지원.
 
-### `FOCUS` — Ritual Timer
-- Fullscreen pixel clock with `Silkscreen` font
-- Rotating pentagon SVG overlay that accelerates as time decreases
-- Three intensity phases: normal → `phase-warm` (< 50%) → `phase-tension` (< 25%)
-- Progress timeline bar with 5-minute tick marks
-- Linked task display and status copy: `SIGNAL LOCKED // IN PROGRESS`
-- Controls: `[ PAUSE ]` / `[ COMPLETE LOOP ]`
+### 2.3. 주요 화면 (Views)
+1. **HOME (Dashboard)**
+   * 오늘의 메인 집중 카드, 집중 시그널 바(Signal Status Bar), 오늘 집중 슬롯 목록 제공.
+   * "시계 + 작업 정보"를 조합한 강력한 Hero 카드를 통해 즉시 몰입을 유도.
+   * 진행 상황에 따라 시각적 피드백(Red Glow, PolyOutline 애니메이션) 반응.
 
-### `BREAK` — Rest Cycle
-- Green-tinted break timer (5 min standard / 15 min after every 4th block)
-- 3D monolith freezes and wireframe turns green
-- `[ SKIP REST ]` option
+2. **PLANNER (계획 및 캘린더)**
+   * **좌우 분할 뷰(Split Pane)**: 좌측은 월간 캘린더, 우측은 선택 날짜의 집중 큐 및 작업 상세 정보.
+   * 캘린더에서 항목 클릭 시 우측에 상세 정보 제공 및 즉시 "집중 시작" 가능.
+   * AI 작업 세분화(AI Subdivide) 기능을 위한 UI 흐름(Prompting -> AI Output) 구조 통합.
 
-### `ARCHIVE` — Ritual Collection
-- Statistics header: total rituals, today count, streak, total focus minutes
-- Filter chips: `[ ALL ]` / `[ 25M ]` / `[ 50M+ ]` / `[ STREAK ]`
-- Date-grouped ritual cards with shape codes (`■` `▲` `●` `◆`), color-coded by duration
-- Click any card → opens **Ritual Detail Sheet** with signal intensity bar, metadata, and re-execute action
+3. **FOCUS & TIMER (집중 스테이지)**
+   * 집중 생성과 실행을 한 곳으로 통합.
+   * 남은 시간에 따른 **단계별 분위기 전환(Phase-based ambient shift)**.
+   * 백그라운드에서는 느린 폴리곤 회전과 맥박 치는 듯한 효과를, 포그라운드에서는 선명한 픽셀 타이머를 띄움.
+   * 브라우저 탭 지연 방지를 위해 `Date.now()` 기반으로 타이머 정확성 보장.
 
----
+4. **BREAK (휴식)**
+   * 집중 완료 시 자동 휴식 전환, 휴식 건너뛰기 기능.
+   * 위젯 상에서도 완벽히 동기화.
 
-## 3D Background Stage
+5. **ARCHIVE (기록 및 회고 공간)**
+   * "기억의 금고(Memory Vault)" 스타일로, 세션이 끝나면 아카이브 카드로 누적.
+   * **디테일 시트**: 카드 클릭 시 작업의 지속 시간, 신호 강도, 링크된 플래너 슬롯, 시스템 회고록(System Reflection) 등 상세 제공.
+   * 재실행(Re-execute) 버튼을 통한 즉각적인 리추얼 재진입.
 
-The background is a **pixel-constructed media art environment** using Three.js with `RenderPixelatedPass` (pixel size 6).
-
-| Layer | Description |
-|---|---|
-| **Horizon Grid** | `GridHelper` lattice that slowly tracks forward, creating digital spatial depth |
-| **Pixel Monolith** | Low-poly `IcosahedronGeometry` — dark solid core + brutalist wireframe cage + inner red signal mesh |
-| **Symbolic Particles** | 150 grid-snapped `+` symbols (canvas-drawn, `NearestFilter`), drifting downward like signal rain |
-
-### Per-View State Reactions
-
-| View | 3D Behavior |
-|---|---|
-| HOME | Monolith centered, wireframe dim gray, slow rotation, mouse parallax active |
-| FOCUS | Wireframe turns red, scale 1.2×, red inner pulse activates, parallax disabled |
-| BREAK | Monolith freezes, wireframe goes green, scale shrinks to 0.8× |
-| PLAN | Monolith retreats (y: -2, z: -5), scale 0.6×, wireframe near-invisible |
-| ARCHIVE | Monolith nearly gone (scale 0.1), only grid horizon remains |
-
-### Per-View Atmosphere Intensity
-
-| View | Stage Opacity | Scanlines | Grain |
-|---|---|---|---|
-| HOME | 0.70 | 0.85 | 0.30 |
-| FOCUS | 1.00 | 1.20 | 0.40 |
-| BREAK | 0.55 | 0.60 | 0.25 |
-| PLAN | 0.40 | 0.60 | 0.20 |
-| ARCHIVE | 0.32 | 0.55 | 0.22 |
+### 2.4. 데스크톱 위젯 (Tauri)
+* 단순한 브라우저 팝업이 아닌, 타이틀 바 없는 **투명 데스크톱 위젯**(`decorations: false`).
+* `Always-on-top` 속성 및 창 드래그 기능 구현.
+* 메인 화면과 통신하며(Focus 시작/종료 시), 방해 없는 미니멀 타이머 역할 수행.
 
 ---
 
-## Data Flow
+## 3. 데이터 모델
 
-```js
-appState.tasks    // [ { id, title, focusMinutes, breakMinutes, status, timeLabel, targetDate, order } ]
-appState.history  // [ { ...task, completedAt, date, sequence, systemNote } ]
-appState.session  // { activeTaskId, mode, remainingSeconds, isRunning, pomodoroCount, pomodoroGoal, ... }
-appState.aiTasks  // [ ...proposed AI tasks ]
-appState.prefs    // { lang: 'en' | 'ko' }
-```
-
-### Ritual Lifecycle
-
-```
-[OPEN] → user clicks BEGIN → [ACTIVE] → timer runs → timer end / COMPLETE LOOP
-   → task marked [DONE] → history entry created → pomodoroCount++ → BREAK mode
-   → break timer → BREAK end → back to HOME → next ritual
-```
-
-### Persistence (localStorage)
-
-| Key | Content |
-|---|---|
-| `tomato_os_tasks` | Task array |
-| `tomato_os_history` | Completed ritual history |
-| `tomato_os_session` | Session state (pomodoro count, calendar offset, selected date) |
-| `tomato_lang` | Language preference |
+* **Task**: `id, title, focusMinutes, breakMinutes, status, targetDate, order`
+* **History**: Task 속성 + `completedAt, date, sequence, systemNote`
+* **Session**: `activeTaskId, mode (idle/focus/break), remainingSeconds, isRunning, endTime, pomodoroCount...`
 
 ---
 
-## Tech Stack
+## 4. 향후 로드맵 및 개발 목표
 
-| Library | Version | Role |
-|---|---|---|
-| [Vite](https://vite.dev) | ^8.0 | Dev server + ES module bundler |
-| [Three.js](https://threejs.org) | ^0.183 | WebGL 3D background stage |
-| `RenderPixelatedPass` | Three.js addon | Pixel post-processing shader |
-| [GSAP](https://gsap.com) | ^3.14 | State-driven animation & camera transitions |
-| Google Fonts | — | Silkscreen, JetBrains Mono, Inter |
-| Galmuri | CDN | Korean pixel font family |
+### 4.1. 서버 및 클라우드 연동 (P0)
+* Supabase Auth 및 Postgres DB 도입하여 기기간 동기화, 백업 기능 적용.
+* 로컬 `localStorage` 데이터를 클라우드로 마이그레이션하는 로직 추가.
+
+### 4.2. 서비스 품질 고도화 (P1)
+* Vitest를 이용한 핵심 비즈니스 로직(타이머, 상태 관리) 자동화 회귀 테스트 구축.
+* AI 백엔드 연동을 통한 실제 작업 세분화 프롬프팅 기능 구현.
+
+### 4.3. 데스크톱 프로덕션 배포 (P2)
+* Tauri 앱 노터라이즈(macOS), 코드 서명(Windows) 및 자동 업데이트 시스템 구축.
 
 ---
 
-## Development
+## 5. 실행 및 빌드
 
+웹 개발 서버 실행:
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server (http://localhost:5173)
 npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
 ```
 
-> **Troubleshooting**: If the UI appears broken, open DevTools → Application → Local Storage → delete all `tomato_os_*` keys, then refresh. This clears stale data from older versions.
-
----
-
-## Version History
-
-| Version | Highlights |
-|---|---|
-| V11 | Bottom tab bar navigation, meta bar with sector label, per-view atmosphere system |
-| V9 | Split-pane planner, AI planning flow, archive memory vault |
-| V8 | Monthly grid calendar, Korean pixel font (NeoDunggeunmo → Galmuri) |
-| V7 | Calendar planner view, i18n (EN/KO), quick edit D&D |
-| V6 | Pomodoro core completion, scheduling system, archive deep-dive |
-| V5 | Pixel-art media ritual tool identity established |
-| V2 | Brutalist kinetic UI overhaul |
-| V1 | 3D glass tomato, layered SPA, AI task slicing |
-
----
-
-## Philosophy
-
-> "Each screen drives one action.  
-> The background breathes, not decorates.  
-> Focus is not tracked. Focus is performed."
-
-*Imperial Red is a signal event only. Never use it as a base fill.*
-
----
----
-
-# 🍅 Tomato — 포커스 리추얼 툴
-
-> Vite + Three.js + GSAP 기반 픽셀 미디어아트 집중 리추얼 웹 앱입니다.  
-> 생산성 대시보드가 아닙니다. 디지털 제단(Ritual Stage)입니다.
-
-![버전](https://img.shields.io/badge/버전-v11.0-FB3640?style=flat-square&labelColor=000F08)
-
----
-
-## 컨셉
-
-Tomato는 **포커스 리추얼 툴**입니다 — 일반적인 포모도로 타이머가 아닙니다.
-
-집중은 관리하는 것이 아니라 **입장하는 의식(Ritual)**입니다. 비주얼 언어는 픽셀 미디어 아트 설치물, 디지털 조각, 전술적 신호 미학에서 가져왔습니다. 각 세션은 시작 → 신호 잠금 → 긴장 구간 → 완료 의식으로 이어지는 **스테이지 퍼포먼스**입니다.
-
----
-
-## 주요 기능
-
-| 기능 | 설명 |
-|---|---|
-| **5뷰 네비게이션** | HOME · PLAN · FOCUS · ARCHIVE · NEW (하단 탭바) |
-| **3D 배경 스테이지** | Three.js 픽셀화된 모놀리스 + 수평선 그리드 + 파티클 레인 (앱 상태에 반응) |
-| **분할 패널 플래너** | 월간 캘린더(좌) + 플래닝 콘솔(우) |
-| **포모도로 타이머** | Date.now() 기반 정밀 카운트다운, 집중/휴식 사이클, 4블록마다 장기 휴식 |
-| **AI 작업 분할** | 작업을 단계별 집중 블록으로 지능적 분해 |
-| **아카이브 메모리 볼트** | 완료된 리추얼이 수집형 스탬프 카드로 변환, 신호 강도 지표 포함 |
-| **리추얼 상세 시트** | 세션 리포트 + 재실행 + 플래너 교차 참조 |
-| **다국어 (EN / KO)** | 실시간 토글 전환 |
-| **PWA** | Service Worker 기반 오프라인 지원 |
-| **브라우저 알림** | 집중/휴식 완료 알림 |
-| **일자 자동 전환** | 날짜 변경 감지, 미완료 작업 자동 missed 처리 |
-
----
-
-## 디자인 언어
-
-| 원칙 | 설명 |
-|---|---|
-| **Night × Imperial** | 깊은 블랙 베이스(`#000F08`) 위에 임페리얼 레드(`#FB3640`)를 유일한 반응형 신호로 사용 |
-| **픽셀 미디어 아트** | 레트로 게임 미학이 아닌 — 저해상도 디지털 조각 스테이지 |
-| **행동 유도 UX** | 모든 화면은 하나의 행동을 이끕니다. 빈 공간도 초대합니다. |
-| **신호 기반 모션** | 애니메이션은 느리고, 기하학적이며, 상태에 의해 제어됩니다. |
-
-### 컬러 시스템
-
-| 토큰 | 헥스 | 역할 |
-|---|---|---|
-| Deep Base | `#000F08` | 씬 배경, 심연 |
-| Stage Black | `#050505` | 모놀리스 코어, 표면 |
-| Surface Black | `#0F0F0F` | 카드, 패널 |
-| Hero Red | `#FB3640` | 신호 이벤트 전용 — 활성 상태, 긴장 구간 |
-| Break Green | `#2ECC71` | 휴식 사이클 표시 |
-| Soft White | `#F4F1EA` | 타이포그래피, 와이어프레임 반짝임 |
-
-### 타이포그래피
-
-| 폰트 | 사용처 |
-|---|---|
-| `Silkscreen` | EN/숫자 디스플레이 — 섹션 헤더, 시계 숫자 |
-| `Galmuri11/14` | 한국어 픽셀 폰트 — 한글 UI 텍스트 |
-| `JetBrains Mono` | 메타데이터, 타임스탬프, 모노스페이스 카피 |
-
----
-
-## 아키텍처
-
-```
-Tomato/
-├── index.html              # 앱 셸 — 5개 뷰 SPA
-├── package.json            # Vite 8 + Three.js 0.183 + GSAP 3.14
-│
-├── src/
-│   ├── main.js             # 뷰 라우터, 렌더 엔진, 모든 상호작용 (1,387줄)
-│   ├── state.js            # 단일 진실 공급원, localStorage 영속성 (113줄)
-│   ├── timer.js            # Date.now() 기반 카운트다운 엔진 (90줄)
-│   ├── three-scene.js      # 3D 픽셀 미디어아트 배경 스테이지 (253줄)
-│   ├── i18n.js             # EN/KO 사전 (269줄)
-│   └── style.css           # 전체 디자인 시스템 — CSS 커스텀 프로퍼티 (1,644줄)
-│
-├── public/
-│   ├── manifest.json       # PWA 매니페스트
-│   └── sw.js               # Service Worker
-│
-└── ref/                    # 디자인 레퍼런스 파일 (프로덕션 미사용)
-```
-
----
-
-## 5가지 뷰 시스템
-
-### `HOME` — 액션 스테이지
-- 히어로 카드에 오늘의 주요 집중 작업, 다음 작업 미리보기, 오각형 SVG 오버레이
-- 신호 바로 포모도로 블록 진행률 표시 (예: `2/4 BLOCKS`)
-- 우측 패널: **포커스 슬롯**, **신호 통계** (오늘/주간/연속/총합), **최근 리추얼** 스트립
-- CTA: `[ BEGIN RITUAL ]` + `[ OPEN PLANNER ]`
-
-### `PLAN` — 분할 패널 캘린더 플래너
-- **좌측**: 월간 그리드 캘린더 (작업 표시기, 오늘 하이라이트, 날짜 선택)
-- **우측**: 플래닝 콘솔 (배정/미배정 작업 목록, 작업 상세, AI 계획 출력)
-- 셀 더블클릭으로 새 작업 생성
-
-### `FOCUS` — 리추얼 타이머
-- 풀스크린 픽셀 시계 (`Silkscreen` 폰트)
-- 회전하는 오각형 SVG (시간 감소에 따라 가속)
-- 3단계 강도: 일반 → `phase-warm` (< 50%) → `phase-tension` (< 25%)
-- 진행 타임라인 바 + 5분 단위 눈금
-- 버튼: `[ PAUSE ]` / `[ COMPLETE LOOP ]`
-
-### `BREAK` — 휴식 사이클
-- 녹색 톤 휴식 타이머 (기본 5분 / 4번째 블록 이후 15분)
-- 3D 모놀리스 정지 + 와이어프레임 녹색 전환
-
-### `ARCHIVE` — 리추얼 수집함
-- 통계 헤더 + 필터 칩: `[ 전체 ]` / `[ 25분 ]` / `[ 50분+ ]` / `[ 연속 ]`
-- 날짜별 그룹 리추얼 카드 (도형 코드 + 시간별 색상 구분)
-- 카드 클릭 → **리추얼 상세 시트** (신호 강도 바, 메타데이터, 재실행)
-
----
-
-## 3D 배경 스테이지
-
-Three.js `RenderPixelatedPass` (픽셀 사이즈 6) 기반 **픽셀 미디어아트 환경**입니다.
-
-| 레이어 | 설명 |
-|---|---|
-| **수평선 그리드** | `GridHelper` 격자가 느리게 전진, 디지털 공간 깊이감 생성 |
-| **픽셀 모놀리스** | 저폴리 `IcosahedronGeometry` — 솔리드 코어 + 와이어프레임 케이지 + 내부 레드 신호 메쉬 |
-| **심볼릭 파티클** | 격자 스냅 150개 `+` 심볼 파티클, 신호 비처럼 하강 |
-
-### 뷰별 스테이지 반응
-
-| 뷰 | 동작 |
-|---|---|
-| HOME | 모놀리스 중앙, 희미한 회색 와이어프레임, 느린 회전, 마우스 패럴랙스 |
-| FOCUS | 와이어프레임 레드, 스케일 1.2×, 내부 레드 펄스 활성화 |
-| BREAK | 모놀리스 정지, 와이어프레임 녹색, 스케일 0.8× |
-| PLAN | 모놀리스 후퇴 (y:-2, z:-5), 스케일 0.6× |
-| ARCHIVE | 모놀리스 거의 사라짐 (스케일 0.1) |
-
----
-
-## 데이터 플로우
-
-```js
-appState.tasks    // [ { id, title, focusMinutes, breakMinutes, status, timeLabel, targetDate, order } ]
-appState.history  // [ { ...task, completedAt, date, sequence, systemNote } ]
-appState.session  // { activeTaskId, mode, remainingSeconds, isRunning, pomodoroCount, ... }
-appState.aiTasks  // AI 제안 작업 배열
-appState.prefs    // { lang: 'en' | 'ko' }
-```
-
-### 리추얼 라이프사이클
-
-```
-[OPEN] → BEGIN 클릭 → [ACTIVE] → 타이머 → 완료 → [DONE]
-   → history 기록 → pomodoroCount++ → BREAK 모드 → 휴식 종료 → HOME 복귀
-```
-
-### 영속성 (localStorage)
-
-| 키 | 내용 |
-|---|---|
-| `tomato_os_tasks` | 작업 배열 |
-| `tomato_os_history` | 완료된 리추얼 이력 |
-| `tomato_os_session` | 세션 상태 |
-| `tomato_lang` | 언어 설정 |
-
----
-
-## 기술 스택
-
-| 라이브러리 | 버전 | 역할 |
-|---|---|---|
-| [Vite](https://vite.dev) | ^8.0 | 개발 서버 + ES 모듈 번들러 |
-| [Three.js](https://threejs.org) | ^0.183 | WebGL 3D 배경 스테이지 |
-| `RenderPixelatedPass` | Three.js 애드온 | 픽셀 포스트프로세싱 셰이더 |
-| [GSAP](https://gsap.com) | ^3.14 | 상태 기반 애니메이션 |
-| Google Fonts | — | Silkscreen, JetBrains Mono, Inter |
-| Galmuri | CDN | 한국어 픽셀 폰트 패밀리 |
-
----
-
-## 개발 시작
-
+Tauri 데스크톱 앱 빌드 (macOS/Windows):
 ```bash
-# 의존성 설치
-npm install
-
-# 개발 서버 시작 (http://localhost:5173)
-npm run dev
-
-# 프로덕션 빌드
 npm run build
+cd src-tauri
+cargo build
 ```
 
-> **문제 해결**: UI가 깨져보이면, 개발자 도구 → Application → Local Storage에서 `tomato_os_*` 키를 모두 삭제 후 새로고침 하세요.
-
----
-
-## 버전 이력
-
-| 버전 | 주요 변경 |
-|---|---|
-| V11 | 하단 탭바 내비게이션, 메타바 섹터 레이블, 뷰별 분위기 시스템 |
-| V9 | 분할 패널 플래너, AI 플래닝 플로우, 아카이브 메모리 볼트 |
-| V8 | 월간 그리드 캘린더, 한글 픽셀 폰트 전역 적용 |
-| V7 | 캘린더형 플래너 뷰, 다국어 지원 (EN/KO) |
-| V6 | 포모도로 코어 완성, 일정관리 시스템, 아카이브 심화 |
-| V5 | 픽셀아트 미디어 리추얼 툴 정체성 확립 |
-| V1 | 3D 유리 토마토, 레이어드 SPA, AI 태스크 슬라이싱 |
-
----
-
-## 프로젝트 철학
-
-> "각 화면은 하나의 행동을 이끕니다.  
-> 배경은 숨쉬되, 장식하지 않습니다.  
-> 집중은 기록되지 않습니다. 집중은 수행됩니다."
-
-*임페리얼 레드는 신호 이벤트로만 써야 합니다. 기본 채움(Base fill)으로 사용하지 마세요.*
+현재 개발 서버 주소: `http://localhost:5173/`

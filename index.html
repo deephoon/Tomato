@@ -3,65 +3,261 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%85%3C/text%3E%3C/svg%3E" />
   <title>Tomato — Focus Ritual</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=VT323&family=DotGothic16&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
   <div id="canvas-container"></div>
+  <div class="vignette"></div>
+  <div class="scanlines"></div>
+  <div class="grain"></div>
   <div id="app-overlay">
 
-    <!-- UI Edge Utility -->
-    <div class="corner-utility">
-      <div class="nav-item interactable lang-toggle" id="btn-lang-toggle">[ EN / KR ]</div>
-    </div>
+    <!-- V11 TOP META BAR -->
+    <header class="meta-bar">
+      <div class="mb-brand">
+        <span class="live-dot"></span>
+        <span data-i18n="metaBrand">TOMATO // OS</span>
+      </div>
+      <div class="mb-sector">
+        <span id="mb-sector" data-i18n="metaSectorHome">SECTOR_HOME</span>
+        <span class="lang-toggle auth-user-badge" id="auth-user-badge">[ NO USER ]</span>
+        <span class="lang-toggle interactable" id="btn-auth-logout" title="Sign out">[ LOG OUT ]</span>
+        <span class="lang-toggle interactable" id="btn-widget-toggle" title="Show floating widget">[ ◰ WIDGET ]</span>
+        <span class="lang-toggle interactable" id="btn-lang-toggle">[ EN / KR ]</span>
+      </div>
+    </header>
 
-    <!-- Main HUD Navigation -->
-    <nav class="hud-nav">
-      <div class="nav-item interactable active-nav" id="nav-home" data-i18n="navHOME">[ HOME ]</div>
-      <div class="nav-item interactable" id="nav-calendar" data-i18n="navPLANNER">[ PLANNER ]</div>
-      <div class="nav-item interactable" id="nav-archive" data-i18n="navARCHIVE">[ ARCHIVE ]</div>
+    <!-- V11 BOTTOM TAB NAV (primary navigation) -->
+    <nav class="tab-bar">
+      <div class="tab active interactable" data-tab="home" id="tab-home">
+        <span class="ti"></span>
+        <span class="tl" data-i18n="tabHome">HOME</span>
+      </div>
+      <div class="tab interactable" data-tab="calendar" id="tab-calendar">
+        <span class="ti"></span>
+        <span class="tl" data-i18n="tabPlan">PLAN</span>
+      </div>
+      <div class="tab interactable" data-tab="focus" id="tab-focus">
+        <span class="ti"></span>
+        <span class="tl" data-i18n="tabFocus">FOCUS</span>
+      </div>
+      <div class="tab interactable" data-tab="archive" id="tab-archive">
+        <span class="ti"></span>
+        <span class="tl" data-i18n="tabArchive">ARCH</span>
+      </div>
+    </nav>
+
+    <!-- Legacy hidden (kept for backwards compat with main.js bindings) -->
+    <div class="corner-utility" hidden aria-hidden="true"></div>
+    <nav class="hud-nav" hidden aria-hidden="true">
+      <div class="nav-item" id="nav-home"></div>
+      <div class="nav-item" id="nav-calendar"></div>
+      <div class="nav-item" id="nav-archive"></div>
     </nav>
 
     <!-- 1. HOME -->
     <section id="view-home" class="view-layer active">
-      <div class="hero-stage">
-        <div class="today-date" id="today-date"></div>
-        <h2 class="section-title" data-i18n="heroTitle">TONIGHT'S MAIN FOCUS</h2>
-        <div class="hero-block interactable" id="btn-ritual-start">
-          <div class="block-glow"></div>
-          <div class="block-content" id="home-card-content"></div>
+      <div class="home-grid">
+        <!-- HERO CARD -->
+        <div class="hero-card">
+          <span class="corner tl"></span>
+          <span class="corner tr"></span>
+          <span class="corner bl"></span>
+          <span class="corner br"></span>
+
+          <div class="hero-head">
+            <div class="hh-label">
+              <span class="dot"></span>
+              <span id="hero-kicker" data-i18n="heroKicker">TONIGHT'S MAIN FOCUS</span>
+            </div>
+            <div class="hh-id" id="hero-id">//</div>
+          </div>
+
+          <!-- Signal status bar -->
+          <div class="hero-signal-bar" id="hero-signal-bar"></div>
+
+          <div class="hero-clock-wrap">
+            <svg class="poly" viewBox="0 0 400 400" aria-hidden="true">
+              <polygon points="200,40 360,140 330,320 70,320 40,140"
+                       fill="none" stroke="rgba(251,54,64,0.18)" stroke-width="1" />
+              <rect x="196" y="36" width="8" height="8" fill="rgba(251,54,64,0.6)"/>
+              <rect x="356" y="136" width="8" height="8" fill="rgba(251,54,64,0.6)"/>
+              <rect x="326" y="316" width="8" height="8" fill="rgba(251,54,64,0.6)"/>
+              <rect x="66" y="316" width="8" height="8" fill="rgba(251,54,64,0.6)"/>
+              <rect x="36" y="136" width="8" height="8" fill="rgba(251,54,64,0.6)"/>
+            </svg>
+            <div class="hero-clock">
+              <div id="hero-clock-value" class="big-clock echo">25<span class="col">:</span>00</div>
+              <div class="sl" id="hero-clock-label" data-i18n="heroStandby">// STANDBY MODE //</div>
+            </div>
+          </div>
+
+          <!-- Tonight's focus + next up preview -->
+          <div class="hero-task interactable" id="btn-ritual-start">
+            <div class="ht-left">
+              <div class="ht-kicker" id="ht-kicker" data-i18n="heroNowKicker">TONIGHT'S MAIN FOCUS</div>
+              <div class="ht-title" id="ht-title">—</div>
+              <div class="ht-meta" id="ht-meta">—</div>
+            </div>
+            <div class="ht-right" id="ht-next">
+              <div class="ht-kicker" data-i18n="heroNext">NEXT →</div>
+              <div class="ht-next-title" id="ht-next-title">—</div>
+              <div class="ht-next-time" id="ht-next-time">—</div>
+            </div>
+          </div>
+
+          <div class="hero-cta">
+            <button class="big-cta interactable" id="btn-hero-begin" data-i18n="btnBeginRitual">[ BEGIN RITUAL ]</button>
+            <button class="aux-cta interactable" id="btn-hero-plan" data-i18n="btnOpenPlanner">[ OPEN PLANNER ]</button>
+          </div>
         </div>
-        <div class="pomo-dots" id="pomo-dots"></div>
-        <div class="action-prompt" id="home-prompt" data-i18n="promptStart">>>> CLICK TO BEGIN RITUAL</div>
-        <div class="signal-report" id="signal-report"></div>
+
+        <!-- RIGHT COLUMN PANELS -->
+        <div class="right-col">
+          <div class="panel">
+            <div class="phd">
+              <h3 data-i18n="panelSlots">FOCUS SLOTS // TODAY</h3>
+              <span class="sub" id="slots-summary">—</span>
+            </div>
+            <div class="today-list" id="today-list"></div>
+          </div>
+
+          <div class="panel">
+            <div class="phd">
+              <h3 data-i18n="panelSignal">SIGNAL STATS</h3>
+              <span class="sub" id="stats-summary">24H</span>
+            </div>
+            <div class="stat-grid" id="stat-grid"></div>
+            <div class="streak-dots" id="streak-dots"></div>
+          </div>
+
+          <div class="panel">
+            <div class="phd">
+              <h3 data-i18n="panelRecent">RECENT RITUALS</h3>
+              <span class="sub" id="recent-summary">—</span>
+            </div>
+            <div class="recent-strip" id="recent-strip"></div>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- 2. FOCUS STAGE -->
-    <section id="view-focus" class="view-layer hidden">
-      <div class="focus-center" id="focus-center">
-        <div class="focus-mode-label" id="focus-mode-label" data-i18n="modeFocus">FOCUS</div>
-        <h1 id="time-left" class="time-pixel">25:00</h1>
-        <div id="ritual-status" class="status-indicator" data-i18n="signalLocked">SIGNAL LOCKED // IN PROGRESS</div>
+    <section id="view-focus" class="view-layer hidden focus-screen">
+      <div class="focus-setup" id="focus-setup">
+        <div class="focus-setup-head">
+          <div>
+            <div class="console-section-label" data-i18n="focusSetupKicker">FOCUS BUILDER</div>
+            <h2 data-i18n="focusSetupTitle">Create the next focus block</h2>
+          </div>
+          <div class="focus-setup-status" id="focus-setup-status">READY</div>
+        </div>
+
+        <div class="focus-setup-grid">
+          <form class="focus-draft" id="focus-draft-form">
+            <label class="focus-field">
+              <span data-i18n="focusDraftName">WHAT WILL YOU FOCUS ON?</span>
+              <input id="focus-draft-title" type="text" maxlength="80" autocomplete="off" spellcheck="false" />
+            </label>
+
+            <div class="focus-draft-row">
+              <label class="focus-field">
+                <span data-i18n="labelFocus">FOCUS (MIN)</span>
+                <input id="focus-draft-minutes" type="number" min="5" max="120" step="5" value="25" />
+              </label>
+              <label class="focus-field">
+                <span data-i18n="labelBreak">BREAK (MIN)</span>
+                <input id="focus-draft-break" type="number" min="1" max="30" step="1" value="5" />
+              </label>
+            </div>
+
+            <div class="focus-presets" aria-label="Focus duration presets">
+              <button type="button" class="focus-preset active" data-focus-min="25">25</button>
+              <button type="button" class="focus-preset" data-focus-min="45">45</button>
+              <button type="button" class="focus-preset" data-focus-min="60">60</button>
+              <button type="button" class="focus-preset" data-focus-min="90">90</button>
+            </div>
+
+            <label class="focus-field">
+              <span data-i18n="labelTime">TIME SLOT</span>
+              <input id="focus-draft-time" type="time" />
+            </label>
+
+            <div class="focus-draft-actions">
+              <button type="submit" class="action-btn btn-primary interactable" id="btn-focus-start-now" data-i18n="btnStartNow">[ START NOW ]</button>
+              <button type="button" class="action-btn secondary-btn interactable" id="btn-focus-save-today" data-i18n="btnSaveToday">[ SAVE FOR TODAY ]</button>
+            </div>
+
+          </form>
+
+          <div class="focus-launch-panel">
+            <div class="panel">
+              <div class="phd">
+                <h3 data-i18n="focusTodayQueue">TODAY'S FOCUS QUEUE</h3>
+                <span class="sub" id="focus-queue-summary">—</span>
+              </div>
+              <div class="focus-launch-list" id="focus-launch-list"></div>
+            </div>
+
+            <div class="panel focus-review-mini">
+              <div class="phd">
+                <h3 data-i18n="focusRecentWins">RECENT WINS</h3>
+                <span class="sub" id="focus-recent-summary">—</span>
+              </div>
+              <div id="focus-recent-list" class="focus-recent-list"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="focus-controls" id="focus-controls">
-        <div class="interactable action-btn" id="btn-ritual-pause" data-i18n="btnPause">[ PAUSE ]</div>
-        <div class="interactable action-btn btn-danger" id="btn-ritual-complete" data-i18n="btnComplete">[ COMPLETE LOOP ]</div>
+
+      <svg class="fs-poly" viewBox="0 0 800 800" aria-hidden="true" id="fs-poly-svg">
+        <polygon points="400,60 720,260 660,680 140,680 80,260"
+                 fill="none" stroke="rgba(251,54,64,0.28)" stroke-width="1.5" />
+        <rect x="394" y="54" width="12" height="12" fill="rgba(251,54,64,0.9)"/>
+        <rect x="714" y="254" width="12" height="12" fill="rgba(251,54,64,0.9)"/>
+        <rect x="654" y="674" width="12" height="12" fill="rgba(251,54,64,0.9)"/>
+        <rect x="134" y="674" width="12" height="12" fill="rgba(251,54,64,0.9)"/>
+        <rect x="74" y="254" width="12" height="12" fill="rgba(251,54,64,0.9)"/>
+      </svg>
+      <div class="fs-inner">
+        <div class="fs-label" id="focus-mode-label" data-i18n="modeFocus">FOCUS</div>
+        <h1 id="time-left" class="fs-clock echo"><span>25</span><span class="col">:</span><span>00</span></h1>
+        <div class="fs-linked" id="fs-linked">—</div>
+        <div class="fs-status" id="ritual-status" data-i18n="signalLocked">SIGNAL LOCKED // IN PROGRESS</div>
+      </div>
+
+      <div class="fs-bottom">
+        <div class="fs-timeline">
+          <div class="fs-ticks" id="fs-ticks"></div>
+          <div class="fs-progress"><div class="fill" id="fs-progress-fill"></div></div>
+        </div>
+        <div class="fs-controls" id="focus-controls">
+          <button class="interactable action-btn" id="btn-ritual-pause" data-i18n="btnPause">[ PAUSE ]</button>
+          <button class="interactable action-btn btn-danger" id="btn-ritual-complete" data-i18n="btnComplete">[ COMPLETE LOOP ]</button>
+          <button class="interactable action-btn" id="btn-open-widget" data-i18n="btnOpenWidget" style="display:none">[ ◰ OPEN WIDGET ]</button>
+          <button class="interactable action-btn" id="btn-widget-dash" style="display:none">[ ◰ MAIN ]</button>
+        </div>
       </div>
     </section>
 
     <!-- 3. BREAK STAGE -->
-    <section id="view-break" class="view-layer hidden">
-      <div class="focus-center break-mode">
-        <div class="focus-mode-label" data-i18n="modeRest">REST CYCLE</div>
-        <h1 id="break-time-left" class="time-pixel break-time">05:00</h1>
-        <div id="break-status" class="status-indicator break-status" data-i18n="signalResting">SIGNAL RESTING // RECHARGE</div>
+    <section id="view-break" class="view-layer hidden focus-screen break-screen">
+      <div class="fs-inner">
+        <div class="fs-label" data-i18n="modeRest">REST CYCLE</div>
+        <h1 id="break-time-left" class="fs-clock echo break-time">05:00</h1>
+        <div id="break-status" class="fs-status" data-i18n="signalResting">SIGNAL RESTING // RECHARGE</div>
       </div>
-      <div class="focus-controls">
-        <div class="interactable action-btn" id="btn-skip-break" data-i18n="btnSkipRest">[ SKIP REST ]</div>
+      <div class="fs-bottom">
+        <div class="fs-controls">
+          <button class="interactable action-btn" id="btn-skip-break" data-i18n="btnSkipRest">[ SKIP REST ]</button>
+          <button class="interactable action-btn" id="btn-open-widget-break" data-i18n="btnOpenWidget" style="display:none">[ ◰ OPEN WIDGET ]</button>
+          <button class="interactable action-btn" id="btn-widget-dash-break" style="display:none">[ ◰ MAIN ]</button>
+        </div>
       </div>
     </section>
 
@@ -72,9 +268,12 @@
         <div class="planner-pane left-pane">
           <div class="calendar-container">
             <div class="calendar-header">
-              <div class="interactable cal-nav-btn" id="cal-prev">[ < ]</div>
+              <div class="interactable cal-nav-btn" id="cal-prev">[ &lt; ]</div>
               <h2 class="section-title cal-title" id="cal-month-title">2026. 04</h2>
-              <div class="interactable cal-nav-btn" id="cal-next">[ > ]</div>
+              <div class="cal-header-right">
+                <div class="interactable cal-nav-btn cal-today" id="cal-today" data-i18n="btnToday">[ TODAY ]</div>
+                <div class="interactable cal-nav-btn" id="cal-next">[ &gt; ]</div>
+              </div>
             </div>
             <div class="calendar-grid" id="calendar-grid">
               <div class="cal-day-header">SUN</div>
@@ -84,24 +283,50 @@
               <div class="cal-day-header">THU</div>
               <div class="cal-day-header">FRI</div>
               <div class="cal-day-header">SAT</div>
-              <!-- Dynamic cells here -->
             </div>
           </div>
         </div>
 
-        <!-- RIGHT PANE: AI QUEUE -->
+        <!-- RIGHT PANE: PLANNING CONSOLE -->
         <div class="planner-pane right-pane">
-          <div class="ai-console-header">
-            <h2 class="section-title" data-i18n="unscheduledTasks">UNSCHEDULED TASKS</h2>
-            <div class="action-btn ai-btn interactable" id="btn-replan-ai" data-i18n="aiReplan">[ REPLAN WITH AI ]</div>
+          <div class="console-section date-context-section">
+            <div class="console-section-label" data-i18n="selectedDate">SELECTED DATE</div>
+            <div class="selected-date-display" id="selected-date-display">—</div>
           </div>
-          <div class="queue-list" id="ai-queue-list">
-            <!-- Unscheduled tasks or AI generated blocks here -->
-            <div class="empty-queue-msg">NO TASKS IN QUEUE</div>
+
+          <div class="console-section task-detail-section hidden" id="task-detail-section">
+            <div class="console-section-label" data-i18n="taskDetail">TASK DETAIL</div>
+            <div class="task-detail-card" id="task-detail-card"></div>
+            <div class="task-detail-actions">
+              <button class="action-btn interactable task-start-btn" id="btn-task-begin" data-i18n="btnBeginRitual">[ BEGIN RITUAL ]</button>
+              <button class="action-btn secondary-btn interactable" id="btn-task-edit" data-i18n="btnEditTask">[ EDIT ]</button>
+            </div>
           </div>
-          <div class="ai-actions hidden" id="ai-actions-panel">
-            <div class="action-btn interactable" id="btn-ai-apply" data-i18n="btnApplyPlan">[ APPLY PLAN ]</div>
-            <div class="action-btn secondary-btn interactable" id="btn-ai-regen" data-i18n="btnRegenerate">[ REGENERATE ]</div>
+
+          <div class="console-section scheduled-section">
+            <div class="console-section-label">
+              <span data-i18n="scheduledLabel">SCHEDULED</span>
+              <button class="console-add-btn interactable" id="btn-add-task" title="ADD TASK">+</button>
+            </div>
+            <div class="scheduled-task-list" id="scheduled-task-list">
+              <div class="empty-queue-msg" data-i18n="noScheduled">NO TASKS SCHEDULED</div>
+            </div>
+          </div>
+
+          <div class="console-section queue-section">
+            <div class="console-section-label" data-i18n="unscheduledTasks">UNSCHEDULED TASKS</div>
+            <div class="queue-list" id="ai-queue-list">
+              <div class="empty-queue-msg">NO TASKS IN QUEUE</div>
+            </div>
+          </div>
+
+          <div class="console-section ai-section hidden" id="ai-output-section">
+            <div class="console-section-label" data-i18n="aiPlanOutput">AI PLAN OUTPUT</div>
+            <div class="ai-output-list" id="ai-output-list"></div>
+            <div class="ai-actions" id="ai-actions-panel">
+              <button class="action-btn interactable" id="btn-ai-apply" data-i18n="btnApplyPlan">[ APPLY PLAN ]</button>
+              <button class="action-btn secondary-btn interactable" id="btn-ai-regen" data-i18n="btnRegenerate">[ REGENERATE ]</button>
+            </div>
           </div>
         </div>
       </div>
@@ -109,43 +334,58 @@
 
     <!-- 5. ARCHIVE -->
     <section id="view-archive" class="view-layer hidden">
-      <div class="archive-container">
-        <h2 class="section-title" data-i18n="archiveTitle">RITUAL ARCHIVE</h2>
+      <div class="archive-wrap">
+        <div class="arch-stats" id="arch-stats"></div>
+        <div class="archive-review" id="archive-review"></div>
+        <div class="arch-filters">
+          <div class="af-label" data-i18n="filters">FILTERS</div>
+          <div class="filter-chips" id="filter-chips">
+            <button class="filter-chip active" data-filter="all" data-i18n="filterAll">[ ALL ]</button>
+            <button class="filter-chip" data-filter="25" data-i18n="filter25">[ 25M ]</button>
+            <button class="filter-chip" data-filter="50" data-i18n="filter50">[ 50M ]</button>
+            <button class="filter-chip" data-filter="streak" data-i18n="filterStreak">[ STREAK ]</button>
+          </div>
+        </div>
         <div id="archive-gallery"></div>
+        <div class="arch-vault">
+          <div class="av-label" data-i18n="vaultLabel">DATA VAULT</div>
+          <div class="av-actions">
+            <button class="vault-btn" id="btn-export" type="button" data-i18n="vaultExport">[ ⬇ BACKUP ]</button>
+            <button class="vault-btn" id="btn-import" type="button" data-i18n="vaultImport">[ ⬆ RESTORE ]</button>
+            <input type="file" id="import-file" accept="application/json,.json" hidden />
+          </div>
+          <div class="av-status" id="vault-status"></div>
+        </div>
       </div>
     </section>
 
-    <!-- AI PROMPT MODAL -->
-    <div class="modal-overlay hidden" id="ai-prompt-modal">
-      <div class="modal-box ai-prompt-box">
-        <h3 class="modal-title ai-glitch-text" data-i18n="aiPromptTitle">WHAT IS THE PRIMARY TARGET?</h3>
-        <p class="ai-desc" data-i18n="aiPromptDesc">Enter your objective. The system will curate your focus flow.</p>
-        <div class="modal-field">
-          <input type="text" id="ai-target-input" class="modal-input" placeholder="e.g., Deep System Architecture Design" data-i18n="aiInputPlaceholder" />
+    <!-- RITUAL DETAIL SHEET (Archive) -->
+    <div class="sheet-backdrop hidden" id="sheet-backdrop">
+      <div class="sheet" id="ritual-sheet">
+        <div class="sheet-head">
+          <div class="id" id="sheet-id">RITUAL //</div>
+          <button class="close interactable" id="btn-sheet-close" data-i18n="btnClose">[ CLOSE ]</button>
         </div>
-        <div class="modal-actions">
-          <div class="action-btn interactable" id="btn-ai-curate" data-i18n="btnCurate">[ CURATE FLOW ]</div>
+        <div class="s-title" id="sheet-title">—</div>
+        <dl id="sheet-dl"></dl>
+
+        <div class="signal-intensity" id="signal-intensity">
+          <div class="si-label" data-i18n="signalIntensity">SIGNAL INTENSITY</div>
+          <div class="si-bar"><div class="si-fill" id="si-fill"></div></div>
+          <div class="si-value" id="si-value">—</div>
         </div>
-      </div>
-    </div>
 
-    <!-- AI LOADING OVERLAY -->
-    <div class="modal-overlay hidden" id="ai-loading-overlay">
-      <div class="ai-thinking-text" data-i18n="aiThinking">CURATING TONIGHT'S FLOW...</div>
-    </div>
+        <div class="ref" id="sheet-ref">—</div>
 
-    <!-- MEMORY VAULT DETAIL MODAL -->
-    <div class="modal-overlay hidden" id="vault-detail-modal">
-      <div class="modal-box vault-box">
-        <h3 class="modal-title" data-i18n="memoryVault">RITUAL MEMORY VAULT</h3>
-        <div id="vault-detail-content"></div>
-        <div class="modal-actions">
-          <div class="action-btn interactable" id="btn-vault-close" data-i18n="vaultReturn">[ RETURN TO ARCHIVE ]</div>
+        <div class="s-actions">
+          <button class="action-btn interactable btn-primary" id="btn-sheet-plan" data-i18n="btnReturnPlanner">[ RETURN TO PLANNER ]</button>
+          <button class="action-btn interactable" id="btn-sheet-reexec" data-i18n="btnReexecute">[ RE-EXECUTE ]</button>
+          <button class="action-btn secondary-btn interactable" id="btn-sheet-close-2" data-i18n="btnClose">[ CLOSE ]</button>
         </div>
       </div>
     </div>
 
-    <!-- EDIT MODAL -->
+    <!-- EDIT MODAL (task add/edit with inline AI) -->
     <div class="modal-overlay hidden" id="edit-modal">
       <div class="modal-box">
         <h3 class="modal-title" data-i18n="modalTitle">[ RECONFIGURE SIGNAL ]</h3>
@@ -168,15 +408,76 @@
           <input type="time" id="edit-time" class="modal-input" />
         </div>
         <input type="hidden" id="edit-task-id" />
+
+        <!-- AI Subdivision (inline, expandable) -->
+        <div class="ai-subdivide-section hidden" id="ai-subdivide-section">
+          <div class="console-section-label" style="margin-bottom:0.8rem;" data-i18n="aiSubdivision">AI SUBDIVISION</div>
+          <div class="ai-subdivide-output" id="ai-subdivide-output"></div>
+        </div>
+
         <div class="modal-actions">
-          <div class="interactable action-btn" id="btn-modal-save" data-i18n="btnConfirm">[ CONFIRM ]</div>
-          <div class="interactable action-btn" id="btn-modal-cancel" data-i18n="btnAbort">[ ABORT ]</div>
-          <div class="interactable action-btn btn-danger" id="btn-modal-delete" data-i18n="btnDelete">[ DECOMMISSION ]</div>
+          <button class="interactable action-btn btn-primary" id="btn-modal-save" data-i18n="btnConfirm">[ CONFIRM ]</button>
+          <button class="interactable action-btn secondary-btn" id="btn-modal-ai-subdivide" data-i18n="btnAISubdivide">[ AI SUBDIVIDE ]</button>
+          <button class="interactable action-btn" id="btn-modal-cancel" data-i18n="btnAbort">[ ABORT ]</button>
+          <button class="interactable action-btn btn-danger" id="btn-modal-delete" data-i18n="btnDelete">[ DECOMMISSION ]</button>
         </div>
       </div>
     </div>
 
   </div>
+
+  <!-- Auth gate — local user profiles for personal workspaces -->
+  <section id="auth-gate" class="auth-gate" aria-label="User sign in">
+    <form class="auth-panel" id="auth-form">
+      <div class="auth-topline">
+        <div class="auth-kicker" data-i18n="authKicker">TOMATO // USER SPACE</div>
+        <button class="auth-lang-toggle interactable" id="btn-auth-lang-toggle" type="button">[ EN / KR ]</button>
+      </div>
+      <h1 id="auth-title" data-i18n="authSignInTitle">SIGN IN</h1>
+      <p id="auth-subtitle" data-i18n="authSignInSubtitle">Sign in to load your personal Tomato workspace.</p>
+
+      <label class="auth-field">
+        <span data-i18n="authUserId">USER ID</span>
+        <input id="auth-handle" type="text" autocomplete="username" spellcheck="false" required />
+      </label>
+
+      <label class="auth-field" id="auth-display-field">
+        <span data-i18n="authDisplayName">DISPLAY NAME</span>
+        <input id="auth-display" type="text" autocomplete="nickname" spellcheck="false" />
+      </label>
+
+      <label class="auth-field">
+        <span data-i18n="authPassword">PASSWORD</span>
+        <input id="auth-password" type="password" autocomplete="current-password" required />
+      </label>
+
+      <ul class="auth-rules" id="auth-rules">
+        <li data-rule="handle" data-i18n="authRuleHandle">User ID: 3-24 lowercase letters, numbers, dot, underscore, or hyphen.</li>
+        <li data-rule="password-length" data-i18n="authRulePasswordLength">Password: at least 8 characters.</li>
+        <li data-rule="password-mix" data-i18n="authRulePasswordMix">Password must include letters and numbers.</li>
+      </ul>
+
+      <div class="auth-message" id="auth-message" aria-live="polite"></div>
+
+      <div class="auth-actions">
+        <button class="action-btn btn-primary interactable" id="btn-auth-submit" type="submit">[ SIGN IN ]</button>
+        <button class="action-btn secondary-btn interactable" id="btn-auth-switch" type="button">[ CREATE NEW USER ]</button>
+      </div>
+
+      <p class="auth-note">
+        <span data-i18n="authLocalNote">Local profile mode keeps users separate on this device. Cloud sync can be added with Supabase after deployment setup.</span>
+      </p>
+    </form>
+  </section>
+
+  <!-- Widget close (×) — only visible in the floating widget window -->
+  <div id="widget-close" class="widget-close interactable" data-no-drag title="Close widget">×</div>
+
+  <!-- Widget resize grip (only visible in the floating widget window) -->
+  <div id="widget-resize" class="widget-resize" data-no-drag aria-hidden="true">
+    <svg viewBox="0 0 12 12" width="12" height="12"><path d="M11 3 3 11M11 7 7 11M11 11 11 11" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+  </div>
+
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

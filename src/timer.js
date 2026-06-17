@@ -1,11 +1,20 @@
 // ==========================================
 // TIMER LOGIC — Date.now() Based Precision
 // ==========================================
-import { appState, getActiveTask } from './state.js';
+import { appState, getActiveTask, saveSession, saveHistory, saveTasks } from './state.js';
+import { generateId } from './utils/id.js';
 
 let timerInterval = null;
 
-// --- Format seconds → MM:SS ---
+function getModeDurationSeconds(mode, task) {
+  if (mode === 'break') {
+    const breakMins = task ? (task.breakMinutes || 5) : 5;
+    const isLongBreak = appState.session.pomodoroCount > 0 && appState.session.pomodoroCount % 4 === 0;
+    return (isLongBreak ? 15 : breakMins) * 60;
+  }
+  return (task ? (task.focusMinutes || 25) : 25) * 60;
+}
+
 export function formatTime(totalSeconds) {
   if (totalSeconds <= 0) return '00:00';
   const s2 = Math.ceil(totalSeconds);
@@ -14,76 +23,209 @@ export function formatTime(totalSeconds) {
   return `${m}:${s}`;
 }
 
-// --- Mode Switching ---
-export function switchMode(newMode) {
-  appState.session.mode = newMode;
-  const task = getActiveTask();
+// --- Essential Actions ---
 
-  if (newMode === 'idle') {
-    appState.session.remainingSeconds = task ? task.focusMinutes * 60 : 0;
-  } else if (newMode === 'focus') {
-    if (appState.session.remainingSeconds <= 0) {
-      appState.session.remainingSeconds = task ? task.focusMinutes * 60 : 0;
-    }
-  } else if (newMode === 'break') {
-    const breakMins = task ? (task.breakMinutes || 5) : 5;
-    // Long break every 4 pomos
-    const isLongBreak = appState.session.pomodoroCount > 0 && appState.session.pomodoroCount % 4 === 0;
-    appState.session.remainingSeconds = isLongBreak ? 15 * 60 : breakMins * 60;
-  }
-
-  window.dispatchEvent(new CustomEvent('tomato:statechange'));
-}
-
-// --- Start Timer ---
-export function startTimer() {
-  if (appState.tasks.length === 0) return;
-  if (appState.session.mode === 'idle') switchMode('focus');
-
+export function startFocus(task) {
+  const durationSeconds = getModeDurationSeconds('focus', task);
+  const now = Date.now();
+  
+  appState.session.mode = 'focus';
+  appState.session.activeTaskId = task ? task.id : null;
+  appState.session.startedAt = now;
+  appState.session.remainingSeconds = durationSeconds;
+  appState.session.endTime = now + (durationSeconds * 1000);
   appState.session.isRunning = true;
-  appState.session.endTime = Date.now() + (appState.session.remainingSeconds * 1000);
+  appState.session.pauseCount = 0;
+  appState.session.resumedCount = 0;
+  appState.session.pausedAt = 0;
+  
+  // Create completion key to prevent duplicate history records
+  appState.session.completionKey = `${task ? task.id : 'notask'}_${now}_${durationSeconds}`;
+  appState.session.completedHistoryId = null;
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(tick, 100);
+  saveSession();
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
-// --- Pause Timer ---
-export function pauseTimer() {
-  if (appState.session.isRunning) {
-    const remainingMs = appState.session.endTime - Date.now();
-    appState.session.remainingSeconds = Math.max(0, remainingMs / 1000);
+export function pauseSession() {
+  if (!appState.session.isRunning) return;
+  
+  const now = Date.now();
+  const remainingMs = Math.max(0, appState.session.endTime - now);
+  
+  appState.session.remainingSeconds = remainingMs / 1000;
+  appState.session.pauseCount = (appState.session.pauseCount || 0) + 1;
+  appState.session.pausedAt = now;
+  appState.session.isRunning = false;
+  
+  clearInterval(timerInterval);
+  timerInterval = null;
+  saveSession();
+  window.dispatchEvent(new CustomEvent('tomato:statechange'));
+}
+
+export function resumeSession() {
+  if (appState.session.isRunning) return;
+  if (appState.session.remainingSeconds <= 0) return;
+  
+  if (appState.session.pausedAt) {
+    appState.session.resumedCount = (appState.session.resumedCount || 0) + 1;
+    appState.session.pausedAt = 0;
   }
-  appState.session.isRunning = false;
-  clearInterval(timerInterval);
-  timerInterval = null;
+  
+  appState.session.isRunning = true;
+  appState.session.endTime = Date.now() + (appState.session.remainingSeconds * 1000);
+  
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(tick, 100);
+  saveSession();
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
-// --- Stop Timer ---
-export function stopTimer() {
+export function completeFocus() {
+  if (appState.session.mode !== 'focus') return;
+  
+  const completionKey = appState.session.completionKey;
+  // Deduplicate: check if this completionKey is already in history
+  const alreadySaved = appState.history.some(h => h.completionKey === completionKey);
+  
+  let historyId = appState.session.completedHistoryId;
+  
+  if (!alreadySaved) {
+    const task = getActiveTask();
+    historyId = generateId('h');
+    
+    // Create new history item
+    const historyItem = {
+      id: historyId,
+      taskId: task ? task.id : null,
+      title: task ? task.title : '이름 없는 집중',
+      focusMinutes: task ? task.focusMinutes : 25,
+      breakMinutes: task ? task.breakMinutes : 5,
+      completedAt: Date.now(),
+      date: appState.session.todayDate,
+      sequence: appState.history.filter(h => h.date === appState.session.todayDate).length + 1,
+      systemNote: 'Signal remained stable through completion.',
+      reflection: null, // to be updated later
+      actualSeconds: Math.floor((Date.now() - appState.session.startedAt) / 1000),
+      plannedSeconds: task ? task.focusMinutes * 60 : 25 * 60,
+      completionType: 'completed',
+      pauseCount: appState.session.pauseCount || 0,
+      resumedCount: appState.session.resumedCount || 0,
+      completionKey: completionKey
+    };
+    
+    appState.history.push(historyItem);
+    
+    // Update original task
+    if (task) {
+      task.status = 'done';
+      saveTasks();
+    }
+    
+    appState.session.pomodoroCount += 1;
+    appState.session.completedHistoryId = historyId;
+    saveHistory();
+  }
+
+  // Stop current ticking
   appState.session.isRunning = false;
-  clearInterval(timerInterval);
-  timerInterval = null;
+  appState.session.remainingSeconds = 0;
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  saveSession();
+  
+  // We don't automatically start break here. The UI will prompt the user to start break or reflect.
+  window.dispatchEvent(new CustomEvent('tomato:statechange'));
+  window.dispatchEvent(new CustomEvent('tomato:timerend', { detail: { historyId } }));
 }
 
-// --- Tick ---
+export function startBreak() {
+  const task = getActiveTask();
+  const durationSeconds = getModeDurationSeconds('break', task);
+  const now = Date.now();
+  
+  appState.session.mode = 'break';
+  appState.session.startedAt = now;
+  appState.session.remainingSeconds = durationSeconds;
+  appState.session.endTime = now + (durationSeconds * 1000);
+  appState.session.isRunning = true;
+  appState.session.pauseCount = 0;
+  appState.session.resumedCount = 0;
+  appState.session.pausedAt = 0;
+
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(tick, 100);
+  saveSession();
+  window.dispatchEvent(new CustomEvent('tomato:statechange'));
+}
+
+export function skipBreak() {
+  resetSession();
+}
+
+export function resetSession() {
+  appState.session.mode = 'idle';
+  appState.session.activeTaskId = null;
+  appState.session.remainingSeconds = 0;
+  appState.session.isRunning = false;
+  appState.session.endTime = 0;
+  appState.session.startedAt = 0;
+  appState.session.pausedAt = 0;
+  appState.session.completionKey = null;
+  appState.session.completedHistoryId = null;
+  
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  saveSession();
+  window.dispatchEvent(new CustomEvent('tomato:statechange'));
+}
+
+export function setTask(id) {
+  resetSession();
+  appState.session.activeTaskId = id;
+  saveSession();
+}
+
+// Tick logic
 function tick() {
-  const remainingMs = appState.session.endTime - Date.now();
+  const now = Date.now();
+  const remainingMs = appState.session.endTime - now;
+  
   if (remainingMs <= 0) {
     appState.session.remainingSeconds = 0;
-    stopTimer();
-    window.dispatchEvent(new CustomEvent('tomato:statechange'));
-    window.dispatchEvent(new CustomEvent('tomato:timerend'));
+    if (appState.session.mode === 'focus') {
+      completeFocus();
+    } else if (appState.session.mode === 'break') {
+      // Stop ticking but keep mode === 'break' until a listener transitions us,
+      // so the UI layer can pick the next ritual and notify. main.js owns reset.
+      appState.session.isRunning = false;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      saveSession();
+      window.dispatchEvent(new CustomEvent('tomato:timerend', { detail: { mode: 'break' } }));
+    }
   } else {
     appState.session.remainingSeconds = remainingMs / 1000;
     window.dispatchEvent(new CustomEvent('tomato:statechange'));
   }
 }
 
-// --- Set Active Task ---
-export function setTask(id) {
-  stopTimer();
-  appState.session.activeTaskId = id;
-  switchMode('idle');
-}
+// Sync interval with incoming session state
+window.addEventListener('tomato-synced', (e) => {
+  if (e.detail.type === 'session') {
+    const s = e.detail.payload;
+    if (s.isRunning && !timerInterval) {
+      timerInterval = setInterval(tick, 100);
+    } else if (!s.isRunning && timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+});

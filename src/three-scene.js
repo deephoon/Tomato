@@ -26,12 +26,12 @@ export function init3DScene() {
 
   try {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000F08);
+    scene.background = null;
 
     camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 8);
 
-    renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(1);
     container.appendChild(renderer.domElement);
@@ -52,6 +52,15 @@ export function init3DScene() {
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', onMouseMove);
+
+    renderer.getContext().canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      console.warn("WebGL Context Lost. Awaiting restore...");
+    }, false);
+
+    renderer.getContext().canvas.addEventListener('webglcontextrestored', () => {
+      console.log("WebGL Context Restored.");
+    }, false);
 
     isReady = true;
     animate();
@@ -148,8 +157,19 @@ function buildParticles() {
 // ==========================================
 // ANIMATION LOOP
 // ==========================================
-function animate() {
+let lastRenderTime = 0;
+const WIDGET_FPS = 15;
+const WIDGET_FRAME_TIME = 1000 / WIDGET_FPS;
+
+function animate(currentTime) {
   requestAnimationFrame(animate);
+
+  const isWidgetMode = document.body.classList.contains('widget-mode');
+  if (isWidgetMode && currentTime) {
+    const elapsed = currentTime - lastRenderTime;
+    if (elapsed < WIDGET_FRAME_TIME) return;
+    lastRenderTime = currentTime - (elapsed % WIDGET_FRAME_TIME);
+  }
 
   if (horizonGrid) {
     horizonGrid.position.z += CFG.gridSpeed;
@@ -173,11 +193,15 @@ function animate() {
   composer.render();
 }
 
+let resizeTimeout;
 function handleResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  }, 200);
 }
 
 function onMouseMove(e) {
