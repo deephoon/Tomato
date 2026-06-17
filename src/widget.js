@@ -23,15 +23,28 @@ export function openWidget() {
     .catch((e) => console.error('[widget] show failed:', e));
 }
 
-// Hand off from the widget to the full app:
-//  - Tauri widget  -> open the main page in the default browser
-//  - Browser main   -> stay on the current full page
+// Hand off from the widget to the full app.
+//  - Tauri widget : ask any already-open main tab to surface itself; only spawn a
+//                   NEW browser tab when no live main tab answers. This stops the
+//                   widget from piling up a fresh tab on every click.
+//  - Browser main : stay on the current full page.
 export async function goToMainPage() {
-  if (isTauri()) {
-    try { await invoke('open_main_page', { url: MAIN_URL }); }
-    catch (e) { console.error('[widget] open main page failed:', e); }
-    return;
+  if (!isTauri()) return;
+
+  const hot = import.meta.hot;
+  if (hot) {
+    let mainAlive = false;
+    const onSync = (data) => { if (data && data.type === 'main-here') mainAlive = true; };
+    hot.on('tomato:sync', onSync);
+    hot.send('tomato:sync', { type: 'request-main-focus', ts: Date.now() });
+    // Give a live main tab a moment to answer.
+    await new Promise((r) => setTimeout(r, 450));
+    if (typeof hot.off === 'function') hot.off('tomato:sync', onSync);
+    if (mainAlive) return; // a main tab exists and was asked to come forward — don't open another
   }
+
+  try { await invoke('open_main_page', { url: MAIN_URL }); }
+  catch (e) { console.error('[widget] open main page failed:', e); }
 }
 
 // Hide the widget window. The Tauri app keeps running so the browser can

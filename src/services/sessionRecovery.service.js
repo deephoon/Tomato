@@ -39,8 +39,8 @@ export function recoverSession() {
   // If time has elapsed
   if (now >= session.endTime) {
     if (session.mode === 'focus') {
-      // Simulate ticking to 0
-      completeFocus();
+      // The block finished while the user was away — log it as a recovered completion.
+      completeFocus({ completionType: 'recovered_complete', source: 'recovery' });
       
       const lastHistoryId = session.completedHistoryId;
       const historyItem = appState.history.find(h => h.id === lastHistoryId) || null;

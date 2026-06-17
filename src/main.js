@@ -130,6 +130,7 @@ function init() {
   bindSheet();
   bindWidgetDrag();
   bindWidgetControls();
+  bindMainFocusBridge();
 
   updateI18nDOM();
   updateAuthUI();
@@ -193,6 +194,19 @@ function bindWidgetControls() {
 function requestWidgetOpen() {
   if (isTauri()) openWidget();
   else sendWidgetControl('show');
+}
+
+// The full browser app answers a widget's "return to main" handshake so the widget
+// knows a live tab already exists and shouldn't open a duplicate. (Bringing the tab
+// truly to front is browser-restricted; window.focus() is best-effort.)
+function bindMainFocusBridge() {
+  if (!import.meta.hot || isWidget()) return;
+  import.meta.hot.on('tomato:sync', (data) => {
+    if (!data || data.type !== 'request-main-focus') return;
+    try { window.focus(); } catch (e) {}
+    if (currentView !== 'home') showView('home');
+    import.meta.hot.send('tomato:sync', { type: 'main-here', ts: Date.now() });
+  });
 }
 
 // ==========================================
@@ -1364,11 +1378,20 @@ function renderArchiveGrid() {
   });
 }
 
+function fmtDur(seconds) {
+  const s = Math.max(0, Math.round(seconds || 0));
+  if (s < 60) return `${s} SEC`;
+  return `${Math.round(s / 60)} MIN`;
+}
+
 function rcardHTML(h) {
   const color = colorFor(h.focusMinutes || 25);
   const sym = symbolFor(h.title);
   const shortId = `R-${String(h.id || '').slice(-3).padStart(3, '0')}`;
   const dateStamp = (h.date || '').slice(5).replace('-', '.');
+  // Show real elapsed time; legacy records fall back to the planned block.
+  const actual = h.actualSeconds != null ? h.actualSeconds : (h.focusMinutes || 25) * 60;
+  const partial = h.completionType === 'manual_complete' && h.plannedSeconds && actual < h.plannedSeconds * 0.95;
   return `
     <div class="rcard ${color}" data-hid="${h.id}">
       <div class="rc-top">
@@ -1378,7 +1401,7 @@ function rcardHTML(h) {
       <div class="sym">${sym}</div>
       <div class="rc-btm">
         <div class="title">${h.title || 'RITUAL'}</div>
-        <div class="dur">${h.focusMinutes || 25} MIN</div>
+        <div class="dur${partial ? ' partial' : ''}">${fmtDur(actual)}</div>
       </div>
     </div>
   `;
@@ -1401,17 +1424,28 @@ function openRitualSheet(record) {
   const cDate = new Date(record.completedAt || Date.now());
   const dateStr = `${cDate.getFullYear()}.${String(cDate.getMonth()+1).padStart(2,'0')}.${String(cDate.getDate()).padStart(2,'0')} / ${String(cDate.getHours()).padStart(2,'0')}:${String(cDate.getMinutes()).padStart(2,'0')}`;
 
+  // Real elapsed vs planned — fall back to planned for legacy (pre-V11) records.
+  const plannedSeconds = record.plannedSeconds || (record.focusMinutes || 25) * 60;
+  const actualSeconds = record.actualSeconds != null ? record.actualSeconds : plannedSeconds;
+  const plannedMin = Math.round(plannedSeconds / 60);
+  const pct = plannedSeconds > 0 ? Math.min(100, Math.round((actualSeconds / plannedSeconds) * 100)) : 100;
+  const statusKey = {
+    manual_complete: 'ritualStatusManual',
+    recovered_complete: 'ritualStatusRecovered',
+    widget_complete: 'ritualStatusWidget'
+  }[record.completionType] || 'ritualComplete';
+
   if (sheetId) sheetId.textContent = `RITUAL // ${String(record.id || '').slice(-5)}`;
   if (sheetTitle) sheetTitle.textContent = record.title || t('untitled');
   if (sheetDl) {
     const plannerSlot = record.targetDate && record.timeLabel ? `${record.targetDate} / ${record.timeLabel}` : '—';
     sheetDl.innerHTML = `
       <dt>${t('ritualDate')}</dt><dd>${dateStr}</dd>
-      <dt>${t('ritualDuration')}</dt><dd class="red">${record.focusMinutes || 25} MIN</dd>
+      <dt>${t('ritualDuration')}</dt><dd class="red">${formatTime(actualSeconds)} <span class="dd-sub">/ ${t('ritualPlanned')} ${plannedMin} MIN</span></dd>
       <dt>${t('linkedTask')}</dt><dd>${record.title || '--'}</dd>
       <dt>${t('sequence')}</dt><dd>${record.sequence || 1}${ordinalSuffix(record.sequence || 1)} RITUAL</dd>
       <dt>${t('ritualPlannerSlot')}</dt><dd class="link" data-planner="${record.targetDate || ''}">${plannerSlot}</dd>
-      <dt>${t('ritualStatus')}</dt><dd class="red">${t('ritualComplete')}</dd>
+      <dt>${t('ritualStatus')}</dt><dd class="red">${t(statusKey)}</dd>
     `;
     sheetDl.querySelectorAll('[data-planner]').forEach(el => {
       el.onclick = () => {
@@ -1421,12 +1455,11 @@ function openRitualSheet(record) {
       };
     });
   }
-  // Signal intensity — derive from ratio of completed / planned focus time (dummy heuristic)
+  // Signal intensity — honest ratio of actual focus time vs the planned block.
   if (siFill && siValue) {
-    const pct = Math.min(100, Math.round(((record.focusMinutes || 25) / 50) * 100 + 40));
     siFill.style.width = '0%';
-    requestAnimationFrame(() => { siFill.style.width = `${Math.min(pct, 100)}%`; });
-    siValue.textContent = `${Math.min(pct, 100)}% STEADY`;
+    requestAnimationFrame(() => { siFill.style.width = `${pct}%`; });
+    siValue.textContent = `${pct}% ${pct >= 95 ? t('signalSteady') : t('signalPartial')}`;
   }
   if (sheetRef) sheetRef.textContent = `"${record.systemNote || t('ritualReflection')}"`;
 
@@ -1816,7 +1849,8 @@ function bindFocusControls() {
   if (btnComplete) btnComplete.onclick = () => {
     // Engine logs once (dedup-safe) and dispatches tomato:timerend,
     // which drives the transition into break via handleTimerEnd.
-    completeFocus();
+    // A user-pressed finish is recorded honestly as a manual completion.
+    completeFocus({ completionType: 'manual_complete' });
   };
   if (btnDashFocus) btnDashFocus.onclick = () => goToMainPage();
   if (btnOpenWidget) btnOpenWidget.onclick = requestWidgetOpen;

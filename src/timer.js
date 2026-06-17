@@ -84,19 +84,34 @@ export function resumeSession() {
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
 }
 
-export function completeFocus() {
+export function completeFocus(options = {}) {
   if (appState.session.mode !== 'focus') return;
-  
+
+  const completionType = options.completionType || 'completed';
+  const source = options.source || 'focus';
+
   const completionKey = appState.session.completionKey;
   // Deduplicate: check if this completionKey is already in history
   const alreadySaved = appState.history.some(h => h.completionKey === completionKey);
-  
+
   let historyId = appState.session.completedHistoryId;
-  
+
   if (!alreadySaved) {
     const task = getActiveTask();
     historyId = generateId('h');
-    
+
+    const plannedSeconds = task ? task.focusMinutes * 60 : 25 * 60;
+    const startedAt = appState.session.startedAt || Date.now();
+    // True elapsed time. Cap at planned so a clock that drifts slightly past
+    // the target never reports more than the planned block.
+    const actualSeconds = Math.max(0, Math.min(plannedSeconds, Math.floor((Date.now() - startedAt) / 1000)));
+    const ratio = plannedSeconds > 0 ? actualSeconds / plannedSeconds : 1;
+    // Honestly label an early manual stop as a partial run.
+    const isPartial = completionType === 'manual_complete' && ratio < 0.95;
+    const systemNote = isPartial
+      ? 'Signal cut early — ritual logged as partial.'
+      : 'Signal remained stable through completion.';
+
     // Create new history item
     const historyItem = {
       id: historyId,
@@ -107,18 +122,19 @@ export function completeFocus() {
       completedAt: Date.now(),
       date: appState.session.todayDate,
       sequence: appState.history.filter(h => h.date === appState.session.todayDate).length + 1,
-      systemNote: 'Signal remained stable through completion.',
+      systemNote,
       reflection: null, // to be updated later
-      actualSeconds: Math.floor((Date.now() - appState.session.startedAt) / 1000),
-      plannedSeconds: task ? task.focusMinutes * 60 : 25 * 60,
-      completionType: 'completed',
+      actualSeconds,
+      plannedSeconds,
+      completionType,
+      source,
       pauseCount: appState.session.pauseCount || 0,
       resumedCount: appState.session.resumedCount || 0,
       completionKey: completionKey
     };
-    
+
     appState.history.push(historyItem);
-    
+
     // Update original task
     if (task) {
       task.status = 'done';

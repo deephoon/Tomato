@@ -93,6 +93,37 @@ describe('timer logic', () => {
     expect(appState.history.length).toBe(1); // Still 1
   });
 
+  it('manual complete records actual elapsed time and completionType', () => {
+    const task = { id: 't_1', focusMinutes: 25, title: 'Test' };
+    appState.tasks.push(task);
+
+    vi.setSystemTime(new Date(1000));
+    startFocus(task);
+
+    // Stop after only 30 seconds
+    vi.setSystemTime(new Date(1000 + 30 * 1000));
+    completeFocus({ completionType: 'manual_complete' });
+
+    expect(appState.history.length).toBe(1);
+    const rec = appState.history[0];
+    expect(rec.completionType).toBe('manual_complete');
+    expect(rec.actualSeconds).toBe(30);
+    expect(rec.plannedSeconds).toBe(25 * 60);
+    // actual must be well under planned — the bug was reporting planned as actual
+    expect(rec.actualSeconds).toBeLessThan(rec.plannedSeconds);
+  });
+
+  it('completeFocus caps actualSeconds at plannedSeconds on overrun', () => {
+    const task = { id: 't_1', focusMinutes: 25 };
+    appState.tasks.push(task);
+    vi.setSystemTime(new Date(1000));
+    startFocus(task);
+    // Pretend the clock drifted 10 minutes past the target before completing
+    vi.setSystemTime(new Date(1000 + 35 * 60 * 1000));
+    completeFocus();
+    expect(appState.history[0].actualSeconds).toBe(25 * 60);
+  });
+
   it('startBreak changes mode to break', () => {
     vi.setSystemTime(new Date(1000));
     startBreak();

@@ -57,19 +57,20 @@
   --font-pixel-sm:     "Silkscreen", "Galmuri9",  ui-monospace, monospace;
   --font-mono:         "JetBrains Mono", "Galmuri11", ui-monospace, monospace;
 
-  /* Type scale */
+  /* Type scale — V11: nudged up ~1px for legibility (big focus numbers unchanged) */
   --fs-display: clamp(64px, 14vw, 128px);
   --fs-clock:   clamp(96px, 18vw, 200px);
-  --fs-title:   clamp(20px, 4.2vw, 28px);
-  --fs-h1:      18px;
-  --fs-h2:      14px;
-  --fs-label:   11px;
-  --fs-status:  10px;
-  --fs-meta:    11px;
-  --fs-micro:   10px;
-  --fs-tiny:    9px;
-  --fs-body:    13px;
-  --fs-btn:     12px;
+  --fs-title:   clamp(21px, 4.2vw, 30px);
+  --fs-h1:      19px;
+  --fs-h2:      15px;
+  --fs-label:   12px;
+  --fs-status:  11px;
+  --fs-meta:    12px;
+  --fs-micro:   11px;
+  --fs-tiny:    10px;
+  --fs-small:   13px;
+  --fs-body:    14px;
+  --fs-btn:     13px;
 
   --lh-tight: 1;
   --lh-snug:  1.15;
@@ -1355,7 +1356,7 @@ body.auth-locked #app-overlay {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: minmax(48px, auto);
+  grid-auto-rows: minmax(72px, auto);
   border-top: var(--border-solid);
   border-left: var(--border-solid);
 }
@@ -1384,7 +1385,7 @@ body.auth-locked #app-overlay {
   cursor: pointer;
   transition: background .15s;
   overflow: hidden;
-  min-height: clamp(44px, 12vw, 72px);
+  min-height: clamp(66px, 13vw, 112px);
 }
 .cal-cell:hover { background: rgba(255,255,255,0.04); }
 .cal-cell.other-month { opacity: 0.3; }
@@ -1403,7 +1404,7 @@ body.auth-locked #app-overlay {
 .cal-task-count {
   position: absolute; top: 2px; right: 4px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--hero-red);
   opacity: 0.8;
 }
@@ -1426,8 +1427,8 @@ body.auth-locked #app-overlay {
 
 .cal-task-item {
   font-family: var(--font-mono);
-  font-size: 9px;
-  padding: 1px 3px;
+  font-size: 11px;
+  padding: 2px 4px;
   background: rgba(255,255,255,0.06);
   border-left: 2px solid var(--text-dim);
   color: var(--text-primary);
@@ -1871,6 +1872,13 @@ body.auth-locked #app-overlay {
 .rcard .dur {
   font-family: var(--font-mono); font-size: var(--fs-tiny);
   letter-spacing: var(--ls-pixel-wide); opacity: 0.8;
+}
+.rcard .dur.partial { opacity: 0.55; }
+/* Planned-vs-actual sub label inside the detail sheet duration row */
+.dd-sub {
+  font-family: var(--font-mono); font-size: var(--fs-tiny);
+  color: var(--text-dim); letter-spacing: var(--ls-status);
+  margin-left: var(--s-1);
 }
 
 /* Ritual detail sheet */
