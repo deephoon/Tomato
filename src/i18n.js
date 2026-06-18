@@ -108,6 +108,11 @@ export const dict = {
     systemNote: "SYSTEM NOTE",
     aiSubdivision: "AI SUBDIVISION",
     aiPlanOutput: "AI PLAN OUTPUT",
+    aiCurating: "[ CURATING... ]",
+    aiEditHint: "Tweak titles & minutes, then apply.",
+    aiApply: "[ APPLY BLOCKS ]",
+    aiRegen: "[ REGENERATE ]",
+    aiNeedTitle: "Enter a task title first.",
 
     // V10
     heroKicker: "ACTIVE SIGNAL",
@@ -339,6 +344,11 @@ export const dict = {
     systemNote: "시스템 기록",
     aiSubdivision: "AI 세분화",
     aiPlanOutput: "AI 플랜 출력",
+    aiCurating: "[ 구성 중... ]",
+    aiEditHint: "제목과 시간을 다듬은 뒤 적용하세요.",
+    aiApply: "[ 블록 적용 ]",
+    aiRegen: "[ 다시 생성 ]",
+    aiNeedTitle: "먼저 작업 제목을 입력하세요.",
 
     // V10
     heroKicker: "활성 신호",

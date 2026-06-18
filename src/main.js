@@ -13,6 +13,7 @@ import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
 import { isPipSupported } from './utils/runtime.js';
 import { openWidget, updateWidget, isWidgetOpen } from './widget/pip.js';
+import { generateSubdivisionBlocks } from './services/subdivide.service.js';
 import {
   getTotalFocusMinutes,
   getCurrentStreak,
@@ -1693,44 +1694,63 @@ function bindModal() {
   if (btnAI) btnAI.onclick = () => runAISubdivide(btnAI);
 }
 
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 function runAISubdivide(btnAI) {
   const title = ($('edit-title').value || '').trim();
-  if (!title) return;
-  const focusMin = parseInt($('edit-focus').value) || 25;
-
   const section = $('ai-subdivide-section');
   const output = $('ai-subdivide-output');
   if (!section || !output) return;
+  if (!title) {
+    section.classList.remove('hidden');
+    output.innerHTML = `<div class="ai-sub-hint">${t('aiNeedTitle')}</div>`;
+    return;
+  }
+  const focusMin = parseInt($('edit-focus').value) || 25;
 
   const originalText = btnAI.textContent;
-  btnAI.textContent = '[ CURATING... ]';
+  btnAI.textContent = t('aiCurating');
   btnAI.style.pointerEvents = 'none';
 
   setTimeout(() => {
     const blocks = generateSubdivisionBlocks(title, focusMin);
 
     output.innerHTML = blocks.map((b, i) => `
-      <div class="ai-sub-block">
+      <div class="ai-sub-block" data-sub-row>
         <span class="ai-sub-idx">${i + 1}</span>
-        <span class="ai-sub-title">${b.title}</span>
-        <span class="ai-sub-dur">${b.dur}m</span>
+        <input class="ai-sub-title-input" type="text" maxlength="80" value="${escapeAttr(b.title)}" />
+        <span class="ai-sub-dur-field">
+          <input class="ai-sub-dur-input" type="number" min="5" max="120" step="5" value="${b.dur}" />
+          <span class="ai-sub-dur-unit">m</span>
+        </span>
       </div>
     `).join('') + `
+      <div class="ai-sub-hint">${t('aiEditHint')}</div>
       <div class="ai-sub-actions">
-        <div class="action-btn btn-primary interactable" id="btn-sub-apply">[ APPLY BLOCKS ]</div>
-        <div class="action-btn secondary-btn interactable" id="btn-sub-regen">[ REGENERATE ]</div>
+        <div class="action-btn btn-primary interactable" id="btn-sub-apply">${t('aiApply')}</div>
+        <div class="action-btn secondary-btn interactable" id="btn-sub-regen">${t('aiRegen')}</div>
       </div>
     `;
     section.classList.remove('hidden');
     btnAI.textContent = originalText;
     btnAI.style.pointerEvents = '';
 
-    $('btn-sub-apply').onclick = () => applySubdivision(blocks);
+    $('btn-sub-apply').onclick = () => applySubdivision();
     $('btn-sub-regen').onclick = () => runAISubdivide(btnAI);
-  }, 1000);
+  }, 600);
 }
 
-function applySubdivision(blocks) {
+// Read the (possibly user-edited) blocks straight from the DOM and create tasks.
+function applySubdivision() {
+  const rows = [...document.querySelectorAll('#ai-subdivide-output [data-sub-row]')];
+  const blocks = rows.map(row => ({
+    title: (row.querySelector('.ai-sub-title-input').value || '').trim(),
+    dur: Math.max(5, parseInt(row.querySelector('.ai-sub-dur-input').value) || 25)
+  })).filter(b => b.title);
+  if (!blocks.length) return;
+
   const now = new Date();
   let hr = now.getHours();
   let min = now.getMinutes() < 30 ? 30 : 0;
@@ -1754,29 +1774,6 @@ function applySubdivision(blocks) {
   saveTasks();
   closeEditModal();
   renderAll();
-}
-
-function generateSubdivisionBlocks(title, total) {
-  if (total <= 25) {
-    return [
-      { title: `${title} - SETUP & PLAN`, dur: 10 },
-      { title: `${title} - EXECUTE`, dur: 15 }
-    ];
-  }
-  if (total <= 50) {
-    return [
-      { title: `${title} - PHASE 1 [DRAFT]`, dur: 25 },
-      { title: `${title} - PHASE 2 [REFINE]`, dur: Math.min(25, total - 25) }
-    ];
-  }
-  const phases = ['RESEARCH', 'DRAFT', 'BUILD', 'REVIEW', 'POLISH', 'FINALIZE'];
-  const count = Math.min(6, Math.ceil(total / 25));
-  const blocks = [];
-  for (let i = 0; i < count; i++) {
-    const dur = i === count - 1 ? total - 25 * i : 25;
-    blocks.push({ title: `${title} - ${phases[i] || `BLOCK ${i + 1}`}`, dur: Math.max(10, dur) });
-  }
-  return blocks;
 }
 
 // ==========================================
