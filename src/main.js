@@ -12,6 +12,7 @@ import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
 import { isPipSupported } from './utils/runtime.js';
+import { openWidget, updateWidget, isWidgetOpen } from './widget/pip.js';
 import {
   getTotalFocusMinutes,
   getCurrentStreak,
@@ -160,164 +161,49 @@ function init() {
   showView('home');
 }
 
-let pipWindow = null;
-
 function bindWidgetControls() {
   const toggleBtn = $('btn-widget-toggle');
   if (toggleBtn) toggleBtn.onclick = requestWidgetOpen;
 }
 
-async function requestWidgetOpen() {
-  if (!('documentPictureInPicture' in window)) {
-    alert(t('pipNotSupported') || "이 브라우저는 위젯(PiP) 기능을 지원하지 않습니다. (최신 Chrome/Edge 사용 권장)");
-    return;
-  }
-  
-  if (pipWindow) {
-    pipWindow.focus();
-    return;
-  }
-  
-  try {
-    pipWindow = await window.documentPictureInPicture.requestWindow({
-      width: 320,
-      height: 200,
-    });
-    
-    // Copy stylesheets
-    [...document.styleSheets].forEach((styleSheet) => {
-      try {
-        const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
-        const style = document.createElement('style');
-        style.textContent = cssRules;
-        pipWindow.document.head.appendChild(style);
-      } catch (e) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.type = styleSheet.type;
-        link.media = styleSheet.media;
-        link.href = styleSheet.href;
-        pipWindow.document.head.appendChild(link);
-      }
-    });
+// Snapshot of the timer state the widget needs to render itself.
+function getWidgetSnapshot() {
+  const task = getActiveTask();
+  const mode = appState.session.mode;
+  const total = mode === 'break'
+    ? (task ? (task.breakMinutes || 5) * 60 : 5 * 60)
+    : (task ? task.focusMinutes * 60 : 25 * 60);
+  return {
+    mode,
+    remaining: appState.session.remainingSeconds,
+    running: appState.session.isRunning,
+    title: task ? task.title : '',
+    total
+  };
+}
 
-    // Custom PiP Styles (Media-Art Edition)
-    const globalStyle = document.createElement('style');
-    globalStyle.textContent = `
-      body {
-        margin: 0; padding: 0;
-        background: var(--bg-deep, #000F08);
-        color: var(--text-primary, #F4F1EA);
-        font-family: var(--font-pixel, "Silkscreen", "Galmuri11", monospace);
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        height: 100vh; width: 100vw; box-sizing: border-box;
-        user-select: none;
-        overflow: hidden;
-      }
-      .pip-container {
-        position: relative;
-        width: calc(100% - 24px);
-        height: calc(100% - 24px);
-        background: var(--bg-stage, #050505);
-        border: var(--border-solid, 1px solid rgba(255,255,255,0.14));
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        z-index: 20;
-      }
-      .pip-header { 
-        font-size: var(--fs-meta, 12px); 
-        color: var(--hero-red, #fb3640); 
-        letter-spacing: var(--ls-label, 0.2em); 
-        margin-bottom: var(--s-2, 8px); 
-        text-transform: uppercase;
-      }
-      .pip-header.break { color: var(--break-green, #2ecc71); }
-      .pip-clock { 
-        font-size: 64px; 
-        line-height: var(--lh-tight, 1);
-        font-weight: normal; 
-        color: var(--hero-red, #fb3640); 
-        margin-bottom: var(--s-6, 24px); 
-        text-shadow: 0 0 24px var(--hero-red-glow, rgba(251,54,64,0.35)); 
-      }
-      .pip-clock.break { 
-        color: var(--break-green, #2ecc71); 
-        text-shadow: 0 0 24px var(--break-green-glow, rgba(46,204,113,0.3)); 
-      }
-      .pip-controls { 
-        display: flex; gap: var(--s-3, 12px); 
-      }
-      .btn-pip { 
-        background: transparent; 
-        border: 1px solid var(--hairline-3, rgba(255,255,255,0.22)); 
-        color: var(--text-muted, rgba(244,241,234,0.72)); 
-        cursor: pointer; 
-        padding: 6px 16px; 
-        font-size: var(--fs-btn, 13px);
-        font-family: var(--font-pixel, inherit);
-        letter-spacing: var(--ls-pixel-normal, 0.08em);
-        transition: all 0.2s;
-        text-transform: uppercase;
-      }
-      .btn-pip:hover { 
-        background: rgba(255,255,255,0.05); 
-        border-color: var(--text-primary, #F4F1EA); 
-        color: var(--text-primary);
-      }
-    `;
-    pipWindow.document.head.appendChild(globalStyle);
-
-    // Create DOM
-    pipWindow.document.body.innerHTML = `
-      <div class="vignette"></div>
-      <div class="scanlines"></div>
-      <div class="grain"></div>
-      <div class="pip-container">
-        <span class="corner tl"></span>
-        <span class="corner tr"></span>
-        <span class="corner bl"></span>
-        <span class="corner br"></span>
-        <div class="pip-header" id="pip-mode">FOCUS</div>
-        <div class="pip-clock" id="pip-clock">--:--</div>
-        <div class="pip-controls">
-          <button class="btn-pip" id="btn-pip-play">PAUSE</button>
-          <button class="btn-pip" id="btn-pip-complete">DONE</button>
-          <button class="btn-pip btn-close" id="btn-pip-close">✕</button>
-        </div>
-      </div>
-    `;
-
-    // Bind events
-    pipWindow.document.getElementById('btn-pip-play').onclick = () => {
+function requestWidgetOpen() {
+  openWidget({
+    t,
+    getSnapshot: getWidgetSnapshot,
+    onPrimary: () => {
       const mode = appState.session.mode;
-      if (mode === 'idle') {
-        const task = appState.tasks.find(t => t.id === appState.session.activeTaskId) || pickHomeTask();
+      if (mode === 'idle' || appState.session.remainingSeconds <= 0) {
+        const task = getActiveTask() || pickHomeTask();
         if (task) startTaskRitual(task);
         else startQuickRitual();
+      } else if (appState.session.isRunning) {
+        pauseSession();
       } else {
-        if (appState.session.isRunning) pauseSession();
-        else resumeSession();
+        resumeSession();
       }
-    };
-    pipWindow.document.getElementById('btn-pip-complete').onclick = () => {
-       if (appState.session.mode === 'focus') completeFocus();
-       else if (appState.session.mode === 'break') endBreakManually();
-    };
-    pipWindow.document.getElementById('btn-pip-close').onclick = () => {
-      if (pipWindow) pipWindow.close();
-    };
-
-    pipWindow.addEventListener("pagehide", () => {
-      pipWindow = null;
-      updateFocusHUD(); 
-    });
-
-    // Initial render
-    updateFocusHUD();
-  } catch (err) {
-    console.error("Failed to open PiP window:", err);
-  }
+    },
+    onComplete: () => {
+      if (appState.session.mode === 'focus') completeFocus({ completionType: 'manual_complete' });
+      else if (appState.session.mode === 'break') endBreakManually();
+    },
+    onClosed: () => updateFocusHUD()
+  });
 }
 
 // ==========================================
@@ -2057,44 +1943,8 @@ function updateFocusHUD() {
     }
   }
 
-  // Sync to PiP Window if open
-  if (pipWindow) {
-    const pipClock = pipWindow.document.getElementById('pip-clock');
-    const pipMode = pipWindow.document.getElementById('pip-mode');
-    const pipPlay = pipWindow.document.getElementById('btn-pip-play');
-    const pipComplete = pipWindow.document.getElementById('btn-pip-complete');
-
-    if (pipClock) {
-      if (mode === 'idle') {
-        pipClock.textContent = '--:--';
-        pipClock.classList.remove('break');
-      } else {
-        pipClock.textContent = formatTime(remaining);
-        pipClock.classList.toggle('break', mode === 'break');
-      }
-    }
-    if (pipMode) {
-      if (mode === 'focus') {
-        const taskTitle = task ? task.title : '';
-        pipMode.textContent = taskTitle ? `${t('tabFocus')}: ${taskTitle}` : t('tabFocus');
-      } else if (mode === 'break') {
-        pipMode.textContent = t('tabBreak') || 'BREAK';
-      } else {
-        pipMode.textContent = t('heroStandby') || 'STANDBY';
-      }
-    }
-    if (pipPlay) {
-      if (mode === 'idle') {
-        pipPlay.textContent = t('btnStart') || 'START';
-      } else {
-        pipPlay.textContent = running ? (t('btnPause') || 'PAUSE') : (t('btnResume') || 'RESUME');
-      }
-    }
-    if (pipComplete) {
-      pipComplete.style.display = mode === 'idle' ? 'none' : '';
-      pipComplete.textContent = t('btnComplete') || 'DONE';
-    }
-  }
+  // Mirror state into the floating widget if it is open.
+  if (isWidgetOpen()) updateWidget(getWidgetSnapshot());
 }
 
 // ==========================================
