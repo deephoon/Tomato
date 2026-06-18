@@ -11,16 +11,7 @@ import { signUpWithEmail, signInWithEmail, signOut } from './supabase/auth.servi
 import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
-
-window.isWidget = () => false;
-function isWidget() { return false; }
-window.isTauri = () => false;
-function isTauri() { return false; }
-function beginWindowDrag() {}
-function beginWindowResize() {}
-function hideWidgetSelf() {}
-function bindWidgetWindowControl() {}
-function goToMainPage() {}
+import { isPipSupported } from './utils/runtime.js';
 import {
   getTotalFocusMinutes,
   getCurrentStreak,
@@ -139,17 +130,7 @@ window.addEventListener('tomato:userchange', () => {
 });
 
 function init() {
-  const widgetCtx = isWidget();
-  if (widgetCtx) {
-    document.documentElement.classList.add('widget-mode');
-    document.body.classList.add('widget-mode');
-    announceWidgetReady();
-  }
-
-  // The floating widget is a lightweight HUD — skip the heavy 3D background.
-  if (!widgetCtx) {
-    try { init3DScene(); } catch(e) { console.error('3D scene failed:', e); }
-  }
+  try { init3DScene(); } catch(e) { console.error('3D scene failed:', e); }
   initSyncService();
   processQueue();
   requestNotificationPermission();
@@ -166,56 +147,17 @@ function init() {
   bindArchive();
   initPlannerNav();
   bindSheet();
-  bindWidgetDrag();
   bindWidgetControls();
-  bindMainFocusBridge();
 
   updateI18nDOM();
   updateAuthUI();
   renderAll();
 
-  // Resume ticking if a session was already running (page reload / fresh widget).
+  // Resume ticking if a session was already running (page reload).
   if (appState.auth.user) recoverSession();
   updateFocusHUD();
 
-  if (widgetCtx) {
-    const mode = appState.session.mode;
-    showView(mode === 'break' ? 'break' : 'focus');
-  } else {
-    showView('home');
-  }
-}
-
-function announceWidgetReady() {
-  if (!import.meta.hot) return;
-  import.meta.hot.send('tomato:widget-ready', { ts: Date.now() });
-  window.setInterval(() => {
-    import.meta.hot.send('tomato:widget-ready', { ts: Date.now() });
-  }, 5000);
-}
-
-// ==========================================
-// WIDGET DRAG — JS fallback for non-button surfaces.
-// (Primary drag is declarative via data-tauri-drag-region in the HTML.)
-// ==========================================
-function bindWidgetDrag() {
-  if (!isTauri()) return;
-  // Drag the window from any non-interactive surface.
-  document.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    if (e.target.closest('button, .interactable, a, input, [data-no-drag]')) return;
-    beginWindowDrag();
-  });
-  // Corner grip → OS resize.
-  const grip = $('widget-resize');
-  if (grip) {
-    grip.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      beginWindowResize('SouthEast');
-    });
-  }
+  showView('home');
 }
 
 let pipWindow = null;
@@ -360,7 +302,7 @@ async function requestWidgetOpen() {
     };
     pipWindow.document.getElementById('btn-pip-complete').onclick = () => {
        if (appState.session.mode === 'focus') completeFocus();
-       else if (appState.session.mode === 'break') completeBreak();
+       else if (appState.session.mode === 'break') endBreakManually();
     };
     pipWindow.document.getElementById('btn-pip-close').onclick = () => {
       if (pipWindow) pipWindow.close();
@@ -376,10 +318,6 @@ async function requestWidgetOpen() {
   } catch (err) {
     console.error("Failed to open PiP window:", err);
   }
-}
-
-function bindMainFocusBridge() {
-  // Removed Tauri focus bridge
 }
 
 // ==========================================
@@ -462,7 +400,7 @@ async function handleAuthSubmit(event) {
     updateI18nDOM();
     renderAll();
     recoverSession();
-    showView(isWidget() ? (appState.session.mode === 'break' ? 'break' : 'focus') : 'home');
+    showView('home');
   } catch (err) {
     if (message) {
       message.textContent = t(err.code || err.message) || t('authErrorGeneric');
@@ -582,14 +520,9 @@ function updateAuthRules() {
 window.addEventListener('tomato-synced', (e) => {
   updateAuthUI();
   if (e.detail && e.detail.type === 'session') {
-    const isWidgetMode = document.body.classList.contains('widget-mode');
     const mode = appState.session.mode;
-    if (isWidgetMode) {
-       showView(mode === 'break' ? 'break' : 'focus');
-    } else {
-       if (mode === 'idle') showView(pickHomeTask() ? 'home' : 'focus');
-       else showView(mode);
-    }
+    if (mode === 'idle') showView(pickHomeTask() ? 'home' : 'focus');
+    else showView(mode);
   }
   renderAll();
 });
@@ -598,11 +531,6 @@ window.addEventListener('tomato-synced', (e) => {
 // VIEW SWITCH
 // ==========================================
 function showView(name) {
-  const isWidgetMode = document.body.classList.contains('widget-mode');
-  if (isWidgetMode && name !== 'focus' && name !== 'break') {
-    name = 'focus';
-  }
-  
   currentView = name;
   Object.entries(views).forEach(([, el]) => {
     if (!el) return;
@@ -1201,7 +1129,7 @@ function renderFocusLauncher() {
   if (!setup) return;
   const timerActive = appState.session.mode === 'focus' && appState.session.remainingSeconds > 0;
   const breakActive = appState.session.mode === 'break' && appState.session.remainingSeconds > 0;
-  const showSetup = !isWidget() && !timerActive && !breakActive;
+  const showSetup = !timerActive && !breakActive;
   const view = $('view-focus');
 
   if (view) {
@@ -2012,7 +1940,6 @@ function bindHome() {
 function bindFocusControls() {
   const btnPause = $('btn-ritual-pause');
   const btnComplete = $('btn-ritual-complete');
-  const btnDashFocus = $('btn-widget-dash');
   const btnOpenWidget = $('btn-open-widget');
 
   if (btnPause) btnPause.onclick = () => {
@@ -2032,16 +1959,16 @@ function bindFocusControls() {
     // A user-pressed finish is recorded honestly as a manual completion.
     completeFocus({ completionType: 'manual_complete' });
   };
-  if (btnDashFocus) btnDashFocus.onclick = () => goToMainPage();
   if (btnOpenWidget) btnOpenWidget.onclick = requestWidgetOpen;
 }
 
 function bindBreakControls() {
   const btnSkip = $('btn-skip-break');
-  const btnDashBreak = $('btn-widget-dash-break');
   const btnOpenBreak = $('btn-open-widget-break');
-  if (btnSkip) btnSkip.onclick = () => { resetSession(); endBreak(); };
-  if (btnDashBreak) btnDashBreak.onclick = () => goToMainPage();
+  // Skip ends the break through the single transition path. We must NOT call
+  // resetSession() first — that wipes activeTaskId and makes the next-ritual
+  // picker re-suggest the block we just finished.
+  if (btnSkip) btnSkip.onclick = () => endBreakManually();
   if (btnOpenBreak) btnOpenBreak.onclick = requestWidgetOpen;
 }
 
@@ -2073,15 +2000,11 @@ function updateFocusHUD() {
   const remaining = appState.session.remainingSeconds;
   const running = appState.session.isRunning;
   const task = getActiveTask();
-  const inWidget = isWidget();
   const show = (el, visible) => { if (el) el.style.display = visible ? '' : 'none'; };
 
-  // Browser main can ask the already-running Tauri widget to show itself.
-  // Inside the widget, show only the return-to-main action.
-  show($('btn-open-widget'), !inWidget && mode === 'focus' && remaining > 0);
-  show($('btn-open-widget-break'), !inWidget && mode === 'break' && remaining > 0);
-  show($('btn-widget-dash'), inWidget && mode !== 'break');
-  show($('btn-widget-dash-break'), inWidget && mode === 'break');
+  // Offer the floating PiP widget whenever a timed block is in progress.
+  show($('btn-open-widget'), isPipSupported() && mode === 'focus' && remaining > 0);
+  show($('btn-open-widget-break'), isPipSupported() && mode === 'break' && remaining > 0);
 
   // Primary control label: START (fresh) / RESUME (paused mid-block) / PAUSE (running)
   const btnPause = $('btn-ritual-pause');
@@ -2194,36 +2117,33 @@ function enterBreakMode() {
   updateFocusHUD();
 }
 
-function resetSessionAfterBreak() {
+// Single transition out of break → standby/next ritual. Capture the just-
+// completed task BEFORE resetting so the next-ritual picker can exclude it.
+function finishBreakTransition() {
   const completedTaskId = appState.session.activeTaskId;
-  const nextTask = getNextFocusCandidate(appState.tasks, getTodayStr(), completedTaskId);
-  appState.session.activeTaskId = nextTask ? nextTask.id : null;
-  appState.session.remainingSeconds = nextTask ? nextTask.focusMinutes * 60 : 0;
-  appState.session.isRunning = false;
-  appState.session.endTime = 0;
-  appState.session.lastBreakEndedAt = Date.now();
-  return nextTask;
-}
-
-function endBreak() {
-  sendNotification('notifRestDoneTitle', 'notifRestDoneBody');
-  const nextTask = resetSessionAfterBreak();
   resetSession();
+  const nextTask = getNextFocusCandidate(appState.tasks, getTodayStr(), completedTaskId);
+  appState.session.lastBreakEndedAt = Date.now();
+  saveSession();
   try { set3DMode('focus'); } catch (e) {}
   syncWidgetState();
-  // In the widget: reset the HUD, then hand back to the full page.
-  if (isWidget()) {
-    showView('focus');
-    renderAll();
-    updateFocusHUD();
-    goToMainPage();
-    return;
-  }
-  // In the browser main app: show the next ritual if one exists, otherwise
-  // return to the creation flow so the user can make the next block.
+  // Show the next ritual on HOME if one exists, otherwise return to the
+  // creation flow so the user can build the next block.
   showView(nextTask ? 'home' : 'focus');
   renderAll();
   renderFocusLauncher();
+}
+
+// Natural break completion (timer reached zero).
+function endBreak() {
+  sendNotification('notifRestDoneTitle', 'notifRestDoneBody');
+  finishBreakTransition();
+}
+
+// User actively ended the break (main SKIP button / widget DONE). Same
+// transition, but no "rest finished" notification since it wasn't a surprise.
+function endBreakManually() {
+  finishBreakTransition();
 }
 
 function handleTimerEnd(e) {

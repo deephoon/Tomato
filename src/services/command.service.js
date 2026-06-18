@@ -2,6 +2,7 @@ import { getRuntimeUser } from '../state.js';
 import { insertCommand } from '../repositories/command.repository.js';
 import { queueCommand } from './offlineQueue.service.js';
 import { generateId } from '../utils/id.js';
+import { isWidget } from '../utils/runtime.js';
 
 export async function executeCommand(commandName, payload = {}) {
   const user = getRuntimeUser();
