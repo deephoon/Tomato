@@ -160,9 +160,10 @@ export function completeFocus(options = {}) {
   }
   saveSession();
   
-  // We don't automatically start break here. The UI will prompt the user to start break or reflect.
+  // We don't automatically start break here. The UI decides (auto-break on a
+  // natural finish, or a completion choice when the user finished manually).
   window.dispatchEvent(new CustomEvent('tomato:statechange'));
-  window.dispatchEvent(new CustomEvent('tomato:timerend', { detail: { historyId } }));
+  window.dispatchEvent(new CustomEvent('tomato:timerend', { detail: { historyId, completionType, mode: 'focus' } }));
 }
 
 export function startBreak() {

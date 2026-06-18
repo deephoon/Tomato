@@ -1,4 +1,4 @@
-import { appState, saveTasks, saveHistory, saveSession, getActiveTask, saveLang, sendWidgetControl, claimLegacyDataForCurrentUser, reloadForCurrentUser } from './state.js';
+import { appState, saveTasks, saveHistory, saveSession, getActiveTask, saveLang, updateHistoryReflection, claimLegacyDataForCurrentUser, reloadForCurrentUser } from './state.js';
 import { getTodayStr, getTodayDisplay } from './utils/dateTime.js';
 import { initSyncService } from './services/sync.service.js';
 import { processQueue } from './services/offlineQueue.service.js';
@@ -40,6 +40,9 @@ function updateI18nDOM() {
     } else {
       el.innerHTML = t(key);
     }
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph')));
   });
   const langBtn = document.getElementById('btn-lang-toggle');
   if (langBtn) {
@@ -1826,15 +1829,19 @@ function bindFocusControls() {
   const btnOpenWidget = $('btn-open-widget');
 
   if (btnPause) btnPause.onclick = () => {
-    if (appState.session.isRunning) {
+    const mode = appState.session.mode;
+    // Fresh start from the focus screen when nothing is running yet.
+    if (mode === 'idle' || appState.session.remainingSeconds <= 0) {
+      const task = getActiveTask() || pickHomeTask();
+      if (task) startTaskRitual(task);
+      else startQuickRitual();
+    } else if (appState.session.isRunning) {
       pauseSession();
-      btnPause.textContent = t('btnResume');
-      $('ritual-status').textContent = t('signalPaused');
     } else {
       resumeSession();
-      btnPause.textContent = t('btnPause');
-      $('ritual-status').textContent = t('signalLocked');
     }
+    // Button label + status text are driven centrally by updateFocusHUD
+    // (via the tomato:statechange event), keeping main + widget in sync.
   };
   if (btnComplete) btnComplete.onclick = () => {
     // Engine logs once (dedup-safe) and dispatches tomato:timerend,
@@ -1923,11 +1930,13 @@ function updateFocusHUD() {
       else if (ratio < 0.5) screen.classList.add('phase-warm');
     }
 
-    // tension text
-    if (running && remaining <= 180 && remaining > 0) {
-      $('ritual-status').textContent = t('finalStretch');
-    } else if (remaining > 180 && running) {
-      $('ritual-status').textContent = t('signalLocked');
+    // Status text — single source of truth so the main screen stays in sync no
+    // matter where pause/resume was triggered (main controls OR the widget).
+    const statusEl = $('ritual-status');
+    if (statusEl) {
+      if (!running && remaining > 0) statusEl.textContent = t('signalPaused');
+      else if (running && remaining <= 180 && remaining > 0) statusEl.textContent = t('finalStretch');
+      else if (running) statusEl.textContent = t('signalLocked');
     }
   }
 
@@ -1994,13 +2003,51 @@ function endBreakManually() {
 }
 
 function handleTimerEnd(e) {
-  const endedMode = (e && e.detail && e.detail.mode) || appState.session.mode;
+  const detail = (e && e.detail) || {};
+  const endedMode = detail.mode || appState.session.mode;
   if (endedMode === 'break') {
     endBreak();
+    return;
+  }
+  // Focus just completed — timer.js already logged the history record.
+  // A manual finish means the user is present: offer a choice (reflect / break
+  // / skip). A natural or recovered finish auto-flows into the break rhythm.
+  if (detail.completionType === 'manual_complete') {
+    showCompletionChoice(detail.historyId);
   } else {
-    // Focus just completed — timer.js already logged the history record.
     enterBreakMode();
   }
+}
+
+// Completion choice overlay shown after a manual finish.
+function showCompletionChoice(historyId) {
+  const overlay = $('completion-overlay');
+  if (!overlay) { enterBreakMode(); return; }
+  const task = getActiveTask();
+  const titleEl = $('completion-task');
+  if (titleEl) titleEl.textContent = task ? task.title : t('heroStandby');
+  const reflect = $('completion-reflect');
+  if (reflect) reflect.value = '';
+
+  const saveReflection = () => {
+    const text = reflect ? reflect.value.trim() : '';
+    if (text && historyId) updateHistoryReflection(historyId, text);
+  };
+
+  const btnBreak = $('completion-break');
+  const btnSkip = $('completion-skip');
+  if (btnBreak) btnBreak.onclick = () => {
+    saveReflection();
+    overlay.classList.add('hidden');
+    enterBreakMode();
+  };
+  if (btnSkip) btnSkip.onclick = () => {
+    saveReflection();
+    overlay.classList.add('hidden');
+    finishBreakTransition();
+  };
+
+  overlay.classList.remove('hidden');
 }
 
 // When focus view shown, prime ticks

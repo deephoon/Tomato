@@ -422,6 +422,20 @@
       </div>
     </div>
 
+    <!-- Completion choice — shown after a manual finish -->
+    <div class="modal-overlay hidden" id="completion-overlay">
+      <div class="modal-box completion-box">
+        <div class="completion-kicker" data-i18n="doneKicker">BLOCK COMPLETE ✓</div>
+        <div class="completion-task" id="completion-task">—</div>
+        <label class="completion-reflect-label" data-i18n="doneReflectLabel">REFLECTION (OPTIONAL)</label>
+        <textarea id="completion-reflect" class="completion-reflect" rows="3" maxlength="280" data-i18n-ph="doneReflectPlaceholder" placeholder="Leave a note on this block…"></textarea>
+        <div class="completion-actions">
+          <button class="interactable action-btn btn-primary" id="completion-break" data-i18n="btnStartBreak">[ START BREAK ]</button>
+          <button class="interactable action-btn secondary-btn" id="completion-skip" data-i18n="btnToStandby">[ SKIP TO STANDBY ]</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Auth gate — local user profiles for personal workspaces -->

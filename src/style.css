@@ -2109,6 +2109,48 @@ body.auth-locked #app-overlay {
 .modal-actions .btn-primary { grid-column: 1 / -1; }
 .modal-actions .btn-danger { grid-column: 1 / -1; margin-top: var(--s-2); }
 
+/* Completion choice overlay */
+.completion-box { text-align: center; }
+.completion-kicker {
+  font-family: var(--font-pixel-sm);
+  color: var(--break-green);
+  letter-spacing: var(--ls-label);
+  font-size: var(--fs-label);
+  margin-bottom: var(--s-2);
+}
+.completion-task {
+  font-family: var(--font-pixel-ko-lg);
+  color: var(--text-primary);
+  font-size: var(--fs-h3, 1.1rem);
+  margin-bottom: var(--s-4);
+  word-break: break-word;
+}
+.completion-reflect-label {
+  display: block;
+  text-align: left;
+  font-family: var(--font-pixel-sm);
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--ls-label);
+  margin-bottom: var(--s-2);
+}
+.completion-reflect {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--hairline);
+  color: var(--text-primary);
+  font-family: var(--font-pixel-ko);
+  font-size: var(--fs-meta);
+  padding: var(--s-3);
+  resize: none;
+  margin-bottom: var(--s-4);
+  transition: border-color 0.15s;
+}
+.completion-reflect:focus { outline: none; border-color: var(--break-green); }
+.completion-actions { display: grid; grid-template-columns: 1fr; gap: var(--s-2); }
+.completion-actions .action-btn { min-height: 44px; font-size: var(--fs-btn); }
+
 /* ============================================
    ANIMATIONS
    ============================================ */

@@ -113,6 +113,11 @@ export const dict = {
     aiApply: "[ APPLY BLOCKS ]",
     aiRegen: "[ REGENERATE ]",
     aiNeedTitle: "Enter a task title first.",
+    doneKicker: "BLOCK COMPLETE ✓",
+    doneReflectLabel: "REFLECTION (OPTIONAL)",
+    doneReflectPlaceholder: "Leave a note on this block…",
+    btnStartBreak: "[ START BREAK ]",
+    btnToStandby: "[ SKIP TO STANDBY ]",
 
     // V10
     heroKicker: "ACTIVE SIGNAL",
@@ -349,6 +354,11 @@ export const dict = {
     aiApply: "[ 블록 적용 ]",
     aiRegen: "[ 다시 생성 ]",
     aiNeedTitle: "먼저 작업 제목을 입력하세요.",
+    doneKicker: "블록 완료 ✓",
+    doneReflectLabel: "회고 (선택)",
+    doneReflectPlaceholder: "이 블록에 대한 기록을 남겨보세요…",
+    btnStartBreak: "[ 휴식 시작 ]",
+    btnToStandby: "[ 대기로 건너뛰기 ]",
 
     // V10
     heroKicker: "활성 신호",
