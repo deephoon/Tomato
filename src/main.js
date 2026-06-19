@@ -662,23 +662,14 @@ function renderStatGrid() {
   if (!el) return;
   const today = getTodayStr();
   const todayHist = appState.history.filter(h => h.date === today);
-  const todayMin = todayHist.reduce((s, h) => s + (h.focusMinutes || 0), 0);
-
-  // Week (last 7 days)
-  const weekDates = new Set();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    weekDates.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-  }
-  const weekMin = appState.history
-    .filter(h => weekDates.has(h.date))
-    .reduce((s, h) => s + (h.focusMinutes || 0), 0);
+  // Honest, actual elapsed focus time (falls back to planned for legacy records) —
+  // single source of truth shared with the Archive stats.
+  const todayMin = getTotalFocusMinutes(todayHist);
+  const weekMin = getLast7DaysFocusMinutes(appState.history, today);
+  const totalMin = getTotalFocusMinutes(appState.history);
 
   // Streak: consecutive days ending today/yesterday
   const streak = computeStreak();
-
-  const totalMin = appState.history.reduce((s, h) => s + (h.focusMinutes || 0), 0);
 
   el.innerHTML = `
     <div class="stat accent">

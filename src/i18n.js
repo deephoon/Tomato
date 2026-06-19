@@ -15,8 +15,11 @@ export const dict = {
     tabHome: "HOME",
     tabPlan: "PLAN",
     tabFocus: "FOCUS",
+    tabBreak: "BREAK",
     tabArchive: "ARCH",
     tabNew: "NEW",
+    builderReady: "READY",
+    builderActive: "SYNCED",
 
     // Home View
     heroTitle: "TONIGHT'S MAIN FOCUS",
