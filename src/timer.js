@@ -6,6 +6,9 @@ import { generateId } from './utils/id.js';
 import { executeCommand } from './services/command.service.js';
 
 let timerInterval = null;
+// Tracks the last whole-second we pushed to the UI, so the 100ms tick can keep
+// sub-second timing precision while only repainting the HUD once per second.
+let lastDispatchedSecond = -1;
 
 function getModeDurationSeconds(mode, task) {
   if (mode === 'break') {
@@ -45,6 +48,7 @@ export function startFocus(task) {
   appState.session.completedHistoryId = null;
 
   if (timerInterval) clearInterval(timerInterval);
+  lastDispatchedSecond = -1;
   timerInterval = setInterval(tick, 100);
   saveSession();
   executeCommand('startFocus', { taskId: task ? task.id : null, mode: 'focus' });
@@ -82,6 +86,7 @@ export function resumeSession() {
   appState.session.endTime = Date.now() + (appState.session.remainingSeconds * 1000);
   
   if (timerInterval) clearInterval(timerInterval);
+  lastDispatchedSecond = -1;
   timerInterval = setInterval(tick, 100);
   saveSession();
   executeCommand('resumeSession');
@@ -181,6 +186,7 @@ export function startBreak() {
   appState.session.pausedAt = 0;
 
   if (timerInterval) clearInterval(timerInterval);
+  lastDispatchedSecond = -1;
   timerInterval = setInterval(tick, 100);
   saveSession();
   executeCommand('startBreak');
@@ -236,7 +242,13 @@ function tick() {
     }
   } else {
     appState.session.remainingSeconds = remainingMs / 1000;
-    window.dispatchEvent(new CustomEvent('tomato:statechange'));
+    // Only repaint when the displayed second (MM:SS, ceil) actually changes.
+    // This cuts HUD/widget re-renders from ~10/s to ~1/s without losing precision.
+    const shownSecond = Math.ceil(appState.session.remainingSeconds);
+    if (shownSecond !== lastDispatchedSecond) {
+      lastDispatchedSecond = shownSecond;
+      window.dispatchEvent(new CustomEvent('tomato:statechange'));
+    }
   }
 }
 

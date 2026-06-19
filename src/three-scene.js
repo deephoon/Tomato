@@ -31,7 +31,9 @@ export function init3DScene() {
     camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 0, 8);
 
-    renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: true });
+    // 'low-power' keeps laptops on the integrated GPU. This ambient scene is
+    // trivial to render, so forcing the discrete GPU only burned battery.
+    renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power', alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(1);
     container.appendChild(renderer.domElement);
@@ -159,16 +161,21 @@ function buildParticles() {
 // ==========================================
 let lastRenderTime = 0;
 const WIDGET_FPS = 15;
-const WIDGET_FRAME_TIME = 1000 / WIDGET_FPS;
+const APP_FPS = 30; // The scene drifts slowly; 30fps is indistinguishable from 60+ but halves GPU cost.
 
 function animate(currentTime) {
   requestAnimationFrame(animate);
 
+  // Never burn the GPU while the tab/window is hidden.
+  if (document.hidden) return;
+
+  // Frame-rate cap (battery): 15fps in the compact widget, 30fps otherwise.
   const isWidgetMode = document.body.classList.contains('widget-mode');
-  if (isWidgetMode && currentTime) {
+  const frameTime = 1000 / (isWidgetMode ? WIDGET_FPS : APP_FPS);
+  if (currentTime) {
     const elapsed = currentTime - lastRenderTime;
-    if (elapsed < WIDGET_FRAME_TIME) return;
-    lastRenderTime = currentTime - (elapsed % WIDGET_FRAME_TIME);
+    if (elapsed < frameTime) return;
+    lastRenderTime = currentTime - (elapsed % frameTime);
   }
 
   if (horizonGrid) {

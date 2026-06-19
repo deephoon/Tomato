@@ -54,6 +54,7 @@ export function updateWidget(snapshot) {
   }
   if (modeEl) {
     modeEl.classList.toggle('break', isBreak);
+    modeEl.classList.toggle('idle', isIdle);
     if (isBreak) modeEl.textContent = pipT('tabBreak') || 'BREAK';
     else if (isIdle) modeEl.textContent = pipT('heroStandby') || 'STANDBY';
     else modeEl.textContent = finalStretch ? (pipT('finalStretch') || 'FINAL STRETCH') : (pipT('tabFocus') || 'FOCUS');
@@ -61,13 +62,15 @@ export function updateWidget(snapshot) {
   if (taskEl) {
     taskEl.textContent = (!isBreak && title) ? `→ ${title}` : '';
   }
+  // Keep the terminal bracket styling consistent with the static markup.
+  const bracket = (label) => `[ ${label} ]`;
   if (primary) {
-    if (isIdle) primary.textContent = pipT('btnStart') || 'START';
-    else primary.textContent = running ? (pipT('btnPause') || 'PAUSE') : (pipT('btnResume') || 'RESUME');
+    if (isIdle) primary.textContent = bracket(pipT('btnStart') || 'START');
+    else primary.textContent = bracket(running ? (pipT('btnPause') || 'PAUSE') : (pipT('btnResume') || 'RESUME'));
   }
   if (complete) {
     complete.style.display = isIdle ? 'none' : '';
-    complete.textContent = pipT('btnComplete') || 'DONE';
+    complete.textContent = bracket(pipT('btnComplete') || 'DONE');
   }
 }
 
@@ -150,15 +153,24 @@ const WIDGET_HTML = `
     <span class="corner tr"></span>
     <span class="corner bl"></span>
     <span class="corner br"></span>
-    <div class="pip-mode" id="pip-mode">FOCUS</div>
-    <div class="pip-ring" id="pip-ring">
-      <div class="pip-clock" id="pip-clock">--:--</div>
+    
+    <div class="pip-header">
+      <div class="pip-mode" id="pip-mode">FOCUS</div>
     </div>
-    <div class="pip-task" id="pip-task"></div>
-    <div class="pip-controls">
-      <button class="btn-pip" id="pip-primary">PAUSE</button>
-      <button class="btn-pip btn-pip-accent" id="pip-complete">DONE</button>
-      <button class="btn-pip btn-pip-close" id="pip-close" title="Close">✕</button>
+
+    <div class="pip-body">
+      <div class="pip-ring" id="pip-ring">
+        <div class="pip-clock" id="pip-clock">--:--</div>
+      </div>
+      <div class="pip-task" id="pip-task"></div>
+    </div>
+
+    <div class="pip-footer">
+      <div class="pip-controls">
+        <button class="btn-pip" id="pip-primary">[ PAUSE ]</button>
+        <button class="btn-pip btn-pip-accent" id="pip-complete">[ DONE ]</button>
+        <button class="btn-pip btn-pip-close" id="pip-close" title="Close">[ ✕ ]</button>
+      </div>
     </div>
   </div>
 `;
@@ -172,104 +184,150 @@ const WIDGET_CSS = `
     height: 100vh; width: 100vw; box-sizing: border-box;
     user-select: none; overflow: hidden;
   }
+  .vignette, .scanlines, .grain {
+    position: absolute; inset: 0; pointer-events: none; z-index: 10;
+  }
+  .vignette { box-shadow: inset 0 0 40px rgba(0,0,0,0.8); }
+
   .pip-shell {
     position: relative;
-    width: calc(100% - 18px);
-    height: calc(100% - 18px);
-    margin: 9px;
-    background: radial-gradient(120% 120% at 50% 0%, rgba(251,54,64,0.06), transparent 60%), var(--bg-stage, #050505);
-    border: 1px solid var(--hairline-2, rgba(255,255,255,0.14));
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    margin: 8px;
+    background: radial-gradient(100% 100% at 50% 0%, rgba(251,54,64,0.05), transparent 70%), var(--bg-stage, #050505);
+    border: 1px solid var(--hairline-2, rgba(255,255,255,0.1));
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 10px;
     z-index: 20;
+    padding: 16px 12px;
+    box-sizing: border-box;
   }
   .pip-shell .corner {
-    position: absolute; width: 7px; height: 7px;
-    border: 1px solid var(--hero-red, #FB3640); opacity: 0.7;
+    position: absolute; width: 4px; height: 4px;
+    background: var(--hero-red, #FB3640);
+    opacity: 0.8;
   }
-  .pip-shell .corner.tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
-  .pip-shell .corner.tr { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
-  .pip-shell .corner.bl { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
-  .pip-shell .corner.br { bottom: 6px; right: 6px; border-left: 0; border-top: 0; }
+  .pip-shell .corner.tl { top: -2px; left: -2px; }
+  .pip-shell .corner.tr { top: -2px; right: -2px; }
+  .pip-shell .corner.bl { bottom: -2px; left: -2px; }
+  .pip-shell .corner.br { bottom: -2px; right: -2px; }
 
+  .pip-header {
+    flex: 0 0 auto; width: 100%; display: flex; justify-content: center;
+    margin-bottom: auto;
+  }
   .pip-mode {
+    display: inline-flex; align-items: center; gap: 7px;
     font-size: 11px;
-    letter-spacing: 0.22em;
+    font-family: var(--font-pixel-ko, "Galmuri11", monospace);
+    letter-spacing: 0.25em;
     color: var(--hero-red, #FB3640);
-    text-transform: uppercase;
-    text-align: center;
-    min-height: 13px;
-    padding: 0 10px;
-    max-width: 100%;
-    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    text-shadow: 0 0 8px rgba(251,54,64,0.4);
+    text-transform: uppercase; text-align: center;
   }
-  .pip-mode.break { color: var(--break-green, #2ECC71); }
+  /* CRT "signal" indicator — inherits the mode colour via currentColor. */
+  .pip-mode::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor; box-shadow: 0 0 6px currentColor;
+    flex: 0 0 auto;
+  }
+  .pip-mode.break { color: var(--break-green, #2ECC71); text-shadow: 0 0 8px rgba(46,204,113,0.4); }
+  .pip-mode.idle::before { box-shadow: none; opacity: 0.5; }
 
+  .pip-body {
+    flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; margin: 10px 0;
+  }
   .pip-ring {
     --pip-pct: 0;
     --pip-accent: var(--hero-red, #FB3640);
     position: relative;
-    width: 138px; height: 138px;
+    width: 144px; height: 144px;
     border-radius: 50%;
-    background: conic-gradient(var(--pip-accent) calc(var(--pip-pct) * 1%), rgba(255,255,255,0.07) 0);
+    background: conic-gradient(var(--pip-accent) calc(var(--pip-pct) * 1%), rgba(255,255,255,0.06) 0);
     display: flex; align-items: center; justify-content: center;
     transition: background 0.3s linear;
-    filter: drop-shadow(0 0 14px rgba(251,54,64,0.28));
+    filter: drop-shadow(0 0 10px rgba(251,54,64,0.2));
   }
-  .pip-ring.break { filter: drop-shadow(0 0 14px rgba(46,204,113,0.26)); }
+  .pip-ring.break { filter: drop-shadow(0 0 10px rgba(46,204,113,0.2)); }
   .pip-ring.idle { filter: none; }
+  /* Inset disc: subtle top highlight + inner shadow gives the ring real depth. */
   .pip-ring::before {
-    content: ''; position: absolute; inset: 7px;
+    content: ''; position: absolute; inset: 6px;
     border-radius: 50%;
-    background: var(--bg-stage, #050505);
-    border: 1px solid var(--hairline-1, rgba(255,255,255,0.08));
+    background:
+      radial-gradient(circle at 50% 32%, rgba(255,255,255,0.05), transparent 62%),
+      var(--bg-stage, #050505);
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.65);
+    border: 1px solid var(--hairline-1, rgba(255,255,255,0.06));
   }
-  .pip-ring.pulse { animation: pip-pulse 1.1s ease-in-out infinite; }
+  .pip-ring.pulse { animation: pip-pulse 1.2s ease-in-out infinite; }
   @keyframes pip-pulse {
-    0%, 100% { filter: drop-shadow(0 0 12px rgba(251,54,64,0.30)); }
-    50% { filter: drop-shadow(0 0 26px rgba(251,54,64,0.65)); }
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(251,54,64,0.2)); }
+    50% { filter: drop-shadow(0 0 20px rgba(251,54,64,0.5)); }
   }
   .pip-clock {
     position: relative; z-index: 1;
-    font-size: 42px; line-height: 1;
-    color: var(--hero-red, #FB3640);
-    text-shadow: 0 0 18px var(--hero-red-glow, rgba(251,54,64,0.35));
+    font-family: var(--font-pixel-en, "Silkscreen", monospace);
+    font-size: 32px; line-height: 1;
+    color: var(--text-primary, #F4F1EA);
+    text-shadow: 0 0 12px var(--hero-red-glow, rgba(251,54,64,0.4));
+    letter-spacing: 0.04em;
+    margin-right: -0.04em;
+    transform: translateY(2px);
   }
   .pip-clock.break {
-    color: var(--break-green, #2ECC71);
-    text-shadow: 0 0 18px var(--break-green-glow, rgba(46,204,113,0.3));
+    text-shadow: 0 0 12px var(--break-green-glow, rgba(46,204,113,0.4));
   }
 
   .pip-task {
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    color: var(--text-muted, rgba(244,241,234,0.72));
+    font-size: 11px;
+    font-family: var(--font-pixel-ko, "Galmuri11", monospace);
+    letter-spacing: 0.05em;
+    color: var(--text-primary, #F4F1EA);
     text-align: center;
-    max-width: calc(100% - 24px);
+    max-width: 95%;
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-    min-height: 12px;
   }
 
-  .pip-controls { display: flex; gap: 8px; margin-top: 2px; }
+  .pip-footer {
+    flex: 0 0 auto; width: 100%; display: flex; flex-direction: column; align-items: center;
+    margin-top: auto;
+  }
+  .pip-controls { display: flex; gap: 8px; justify-content: center; width: 100%; }
   .btn-pip {
     background: transparent;
     border: 1px solid var(--hairline-3, rgba(255,255,255,0.22));
     color: var(--text-muted, rgba(244,241,234,0.72));
     cursor: pointer;
-    padding: 6px 14px;
-    font-size: 11px;
-    font-family: var(--font-pixel, inherit);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    transition: all 0.16s;
+    padding: 8px 0;
+    font-size: 10px;
+    font-family: var(--font-pixel-ko, "Galmuri11", monospace);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    transition: transform 0.1s, box-shadow 0.1s, color 0.1s, border-color 0.1s;
+    box-shadow: 2px 2px 0 var(--hairline-1, rgba(255,255,255,0.08));
+    flex: 1;
+    text-align: center;
   }
   .btn-pip:hover {
-    background: rgba(255,255,255,0.05);
-    border-color: var(--text-primary, #F4F1EA);
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--hairline-3, rgba(255,255,255,0.2));
     color: var(--text-primary, #F4F1EA);
+    border-color: var(--text-primary, #F4F1EA);
   }
-  .btn-pip-accent { border-color: var(--hero-red-dim, rgba(251,54,64,0.18)); color: var(--hero-red, #FB3640); }
-  .btn-pip-accent:hover { border-color: var(--hero-red, #FB3640); color: var(--hero-red, #FB3640); background: var(--hero-red-dim, rgba(251,54,64,0.12)); }
-  .btn-pip-close { padding: 6px 10px; }
+  .btn-pip:active {
+    transform: translate(1px, 1px);
+    box-shadow: none;
+  }
+  .btn-pip-accent { 
+    background: rgba(251,54,64,0.05);
+    border-color: var(--hero-red, #FB3640); 
+    color: var(--hero-red, #FB3640); 
+    box-shadow: 2px 2px 0 rgba(251,54,64,0.2);
+  }
+  .btn-pip-accent:hover { 
+    background: rgba(251,54,64,0.1);
+    box-shadow: 3px 3px 0 rgba(251,54,64,0.3);
+  }
+  .btn-pip-close { flex: 0 0 auto; padding: 8px 10px; }
 `;
