@@ -343,6 +343,15 @@
             <button class="filter-chip" data-filter="50" data-i18n="filter50">[ 50M ]</button>
             <button class="filter-chip" data-filter="streak" data-i18n="filterStreak">[ STREAK ]</button>
           </div>
+          <div class="arch-tools">
+            <input type="search" id="archive-search" class="archive-search" autocomplete="off"
+                   data-i18n-ph="archiveSearchPlaceholder" placeholder="SEARCH..." />
+            <select id="archive-sort" class="archive-sort" aria-label="sort">
+              <option value="newest" data-i18n="sortNewest">NEWEST</option>
+              <option value="oldest" data-i18n="sortOldest">OLDEST</option>
+              <option value="longest" data-i18n="sortLongest">LONGEST</option>
+            </select>
+          </div>
         </div>
         <div id="archive-gallery"></div>
         <div class="arch-vault">

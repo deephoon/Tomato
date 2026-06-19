@@ -3,6 +3,7 @@ import { getTodayStr, getTodayDisplay } from './utils/dateTime.js';
 import { initSyncService } from './services/sync.service.js';
 import { processQueue } from './services/offlineQueue.service.js';
 import { generateArchiveInsight } from './services/archiveInsight.service.js';
+import { queryArchive } from './services/archiveQuery.service.js';
 import { recoverSession } from './services/sessionRecovery.service.js';
 import { formatTime, startFocus, pauseSession, resumeSession, completeFocus, startBreak, skipBreak, resetSession } from './timer.js';
 import { init3DScene, set3DMode, triggerRitualManeuver } from './three-scene.js';
@@ -91,6 +92,8 @@ let currentView = 'home';
 let selectedTaskId = null;
 let currentModalDate = getTodayStr();
 let currentArchiveFilter = 'all';
+let currentArchiveSearch = '';
+let currentArchiveSort = 'newest';
 let authMode = 'signin';
 
 // ==========================================
@@ -1216,6 +1219,38 @@ function renderArchive() {
   bindArchiveFilters();
 }
 
+// Wire the filter chips, search box and sort control. Idempotent — re-running
+// just refreshes the bound handlers and reflects current state in the DOM.
+function bindArchiveFilters() {
+  document.querySelectorAll('#filter-chips .filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.filter === currentArchiveFilter);
+    chip.onclick = () => {
+      currentArchiveFilter = chip.dataset.filter || 'all';
+      document.querySelectorAll('#filter-chips .filter-chip')
+        .forEach(c => c.classList.toggle('active', c === chip));
+      renderArchiveGrid();
+    };
+  });
+
+  const searchInput = $('archive-search');
+  if (searchInput) {
+    if (searchInput.value !== currentArchiveSearch) searchInput.value = currentArchiveSearch;
+    searchInput.oninput = () => {
+      currentArchiveSearch = searchInput.value;
+      renderArchiveGrid();
+    };
+  }
+
+  const sortSelect = $('archive-sort');
+  if (sortSelect) {
+    if (sortSelect.value !== currentArchiveSort) sortSelect.value = currentArchiveSort;
+    sortSelect.onchange = () => {
+      currentArchiveSort = sortSelect.value || 'newest';
+      renderArchiveGrid();
+    };
+  }
+}
+
 function renderArchiveStats() {
   const el = $('arch-stats');
   if (!el) return;
@@ -1309,9 +1344,20 @@ async function renderArchiveReview() {
 function renderArchiveGrid() {
   const el = $('archive-gallery');
   if (!el) return;
-  const filtered = appState.history || [];
+  const history = appState.history || [];
 
-  if (filtered.length === 0) {
+  // Backfill ids once (legacy records) so cards stay clickable.
+  let assignedIds = false;
+  history.forEach(h => {
+    if (!h.id) {
+      h.id = `h_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      assignedIds = true;
+    }
+  });
+  if (assignedIds) saveHistory();
+
+  // No records at all → first-run empty state.
+  if (history.length === 0) {
     el.innerHTML = `
       <div class="archive-grid">
         <div class="rcard empty">
@@ -1324,29 +1370,26 @@ function renderArchiveGrid() {
     return;
   }
 
-  const groups = {};
-  let assignedIds = false;
-  filtered.forEach(h => {
-    const date = h.date || 'UNKNOWN';
-    if (!h.id) {
-      h.id = `h_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      assignedIds = true;
-    }
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(h);
+  const groups = queryArchive(history, {
+    filter: currentArchiveFilter,
+    search: currentArchiveSearch,
+    sort: currentArchiveSort,
+    today: getTodayStr()
   });
-  if (assignedIds) saveHistory();
 
-  const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+  // Records exist but the current filter/search hides them all.
+  if (groups.length === 0) {
+    el.innerHTML = `<div class="empty-queue-msg">${t('archiveNoMatch')}</div>`;
+    return;
+  }
+
   let html = '';
-  sortedDates.forEach(date => {
-    const items = groups[date];
-    const totalMin = items.reduce((s, h) => s + (h.focusMinutes || 0), 0);
+  groups.forEach(({ date, items, count, totalMin }) => {
     html += `
       <div class="archive-date-group">
         <div class="archive-date-header">
           <span>${date}</span>
-          <span>${items.length} ${t('rituals')} // ${totalMin} ${t('min')}</span>
+          <span>${count} ${t('rituals')} // ${totalMin} ${t('min')}</span>
         </div>
         <div class="archive-grid">
           ${items.map(h => rcardHTML(h)).join('')}
@@ -1354,15 +1397,17 @@ function renderArchiveGrid() {
       </div>
     `;
   });
-  // Append "next" empty card
-  html += `
-    <div class="archive-grid">
-      <div class="rcard empty" data-action="next">
-        <div class="sym">+</div>
-        <div class="title">${t('awaitNext')}</div>
+  // Append "next" empty card (only on the default, unfiltered view).
+  if (currentArchiveFilter === 'all' && !currentArchiveSearch) {
+    html += `
+      <div class="archive-grid">
+        <div class="rcard empty" data-action="next">
+          <div class="sym">+</div>
+          <div class="title">${t('awaitNext')}</div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  }
   el.innerHTML = html;
 
   el.querySelectorAll('.rcard[data-hid]').forEach(card => {
@@ -1390,6 +1435,7 @@ function rcardHTML(h) {
   // Show real elapsed time; legacy records fall back to the planned block.
   const actual = h.actualSeconds != null ? h.actualSeconds : (h.focusMinutes || 25) * 60;
   const partial = h.completionType === 'manual_complete' && h.plannedSeconds && actual < h.plannedSeconds * 0.95;
+  const reflectSnippet = h.reflection ? `<div class="reflect-snippet">"${escapeAttr(h.reflection)}"</div>` : '';
   return `
     <div class="rcard ${color}" data-hid="${h.id}">
       <div class="rc-top">
@@ -1401,6 +1447,7 @@ function rcardHTML(h) {
         <div class="title">${h.title || 'RITUAL'}</div>
         <div class="dur${partial ? ' partial' : ''}">${fmtDur(actual)}</div>
       </div>
+      ${reflectSnippet}
     </div>
   `;
 }
@@ -1459,7 +1506,9 @@ function openRitualSheet(record) {
     requestAnimationFrame(() => { siFill.style.width = `${pct}%`; });
     siValue.textContent = `${pct}% ${pct >= 95 ? t('signalSteady') : t('signalPartial')}`;
   }
-  if (sheetRef) sheetRef.textContent = `"${record.systemNote || t('ritualReflection')}"`;
+  
+  const noteText = record.reflection ? record.reflection : (record.systemNote || t('ritualReflection'));
+  if (sheetRef) sheetRef.textContent = `"${noteText}"`;
 
   // Action handlers
   $('btn-sheet-plan').onclick = () => navigateToPlannerDate(record.targetDate || record.date);
@@ -2064,11 +2113,17 @@ function showViewWithHook(name) {
   if (name === 'focus') primeFocusTicks();
 }
 // Override the showView reference used in rest of file above — we already call original showView; patch bindings that transition to focus via primeFocusTicks
+// The minute ticks are fixed for a given block, so only rebuild the DOM when
+// the total actually changes — not on every per-second statechange.
+let lastTickTotal = -1;
 window.addEventListener('tomato:statechange', () => {
   if (currentView === 'focus') {
     const task = getActiveTask();
     const total = task ? task.focusMinutes * 60 : 25 * 60;
-    renderFocusTicks(total);
+    if (total !== lastTickTotal) {
+      lastTickTotal = total;
+      renderFocusTicks(total);
+    }
   }
 });
 
