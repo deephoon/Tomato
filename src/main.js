@@ -26,10 +26,10 @@ import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
 import { isPipSupported } from './utils/runtime.js';
-// widget/pip.js is only needed once the floating widget is opened — load on demand.
-let widgetMod = null;
-function isWidgetOpen() { return !!(widgetMod && widgetMod.isWidgetOpen()); }
-function updateWidget(snap) { try { widgetMod && widgetMod.updateWidget(snap); } catch (e) {} }
+// NOTE: keep this a STATIC import. The widget uses documentPictureInPicture
+// .requestWindow(), which needs transient user activation — awaiting a dynamic
+// import() inside the click handler consumes the gesture and the window never opens.
+import { openWidget, updateWidget, isWidgetOpen } from './widget/pip.js';
 import { generateSubdivisionBlocks } from './services/subdivide.service.js';
 import {
   getTotalFocusMinutes,
@@ -208,12 +208,8 @@ function getWidgetSnapshot() {
   };
 }
 
-async function requestWidgetOpen() {
-  if (!widgetMod) {
-    try { widgetMod = await import('./widget/pip.js'); }
-    catch (e) { console.error('Widget import failed:', e); return; }
-  }
-  widgetMod.openWidget({
+function requestWidgetOpen() {
+  openWidget({
     t,
     getSnapshot: getWidgetSnapshot,
     onPrimary: () => {
