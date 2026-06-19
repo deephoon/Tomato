@@ -93,7 +93,8 @@ Tomato의 궁극적인 목표는 사용자의 업무 흐름을 끊김 없이 이
 * 핵심 플로우(완료 모멘트, 위젯 동기화)에 대한 통합 테스트 확장.
 
 ### 5.2. PWA 모바일 및 데스크톱 독립 실행 최적화 (P2)
-* PWA(Progressive Web App) Window Controls Overlay 적용으로 타이틀바 커스텀 및 네이티브 앱과 같은 사용자 경험 개선.
+* **현재 빌드는 일반 웹앱입니다.** 오프라인/설치형 PWA(Service Worker 등록, manifest, hashed-asset precache)는 아직 구현되어 있지 않습니다.
+* (향후) PWA(Progressive Web App) 전환 — Service Worker 자산 precache + Window Controls Overlay로 네이티브 앱 같은 경험 제공.
 
 ---
 
