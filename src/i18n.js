@@ -217,6 +217,8 @@ export const dict = {
     archiveThisWeek: "THIS WEEK",
     archiveAverage: "AVG",
     archiveBestDay: "BEST DAY",
+    archiveLongestSession: "LONGEST",
+    archiveCalmest: "CALMEST",
     archiveLastSession: "LAST SESSION",
     archiveLongest: "LONGEST",
     archiveFocused: "UNINTERRUPTED",
@@ -474,6 +476,8 @@ export const dict = {
     vaultImportMismatch: "다른 계정의 백업입니다. 그래도 덮어쓸까요?",
     vaultNoData: "아직 백업할 데이터가 없습니다.",
     archiveBestDay: "최고 집중일",
+    archiveLongestSession: "최장 세션",
+    archiveCalmest: "가장 안정적",
     archiveLastSession: "최근 세션"
   }
 };
