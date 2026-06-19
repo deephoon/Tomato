@@ -6,14 +6,30 @@ import { generateArchiveInsight } from './services/archiveInsight.service.js';
 import { queryArchive } from './services/archiveQuery.service.js';
 import { recoverSession } from './services/sessionRecovery.service.js';
 import { formatTime, startFocus, pauseSession, resumeSession, completeFocus, startBreak, skipBreak, resetSession } from './timer.js';
-import { init3DScene, set3DMode, triggerRitualManeuver } from './three-scene.js';
+// three-scene.js (and its heavy deps three + gsap) are loaded lazily after first
+// paint so they stay out of the initial bundle. Calls before load are safe no-ops.
+let threeScene = null;
+let three3DRequested = false;
+function load3DScene() {
+  if (three3DRequested) return;
+  three3DRequested = true;
+  import('./three-scene.js').then(mod => {
+    threeScene = mod;
+    try { mod.init3DScene(); mod.set3DMode(currentView); } catch (e) { console.error('3D scene failed:', e); }
+  }).catch(e => console.error('3D import failed:', e));
+}
+function set3DMode(name) { try { threeScene && threeScene.set3DMode(name); } catch (e) {} }
+function triggerRitualManeuver() { try { threeScene && threeScene.triggerRitualManeuver(); } catch (e) {} }
 import { dict } from './i18n.js';
 import { signUpWithEmail, signInWithEmail, signOut } from './supabase/auth.service.js';
 import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
 import { isPipSupported } from './utils/runtime.js';
-import { openWidget, updateWidget, isWidgetOpen } from './widget/pip.js';
+// widget/pip.js is only needed once the floating widget is opened — load on demand.
+let widgetMod = null;
+function isWidgetOpen() { return !!(widgetMod && widgetMod.isWidgetOpen()); }
+function updateWidget(snap) { try { widgetMod && widgetMod.updateWidget(snap); } catch (e) {} }
 import { generateSubdivisionBlocks } from './services/subdivide.service.js';
 import {
   getTotalFocusMinutes,
@@ -138,7 +154,10 @@ window.addEventListener('tomato:userchange', () => {
 });
 
 function init() {
-  try { init3DScene(); } catch(e) { console.error('3D scene failed:', e); }
+  // Defer the 3D atmosphere until the UI has painted — keeps three/gsap off the
+  // critical path so first interaction isn't blocked on WebGL init.
+  if ('requestIdleCallback' in window) requestIdleCallback(() => load3DScene(), { timeout: 2500 });
+  else setTimeout(load3DScene, 1500);
   initSyncService();
   processQueue();
   requestNotificationPermission();
@@ -189,8 +208,12 @@ function getWidgetSnapshot() {
   };
 }
 
-function requestWidgetOpen() {
-  openWidget({
+async function requestWidgetOpen() {
+  if (!widgetMod) {
+    try { widgetMod = await import('./widget/pip.js'); }
+    catch (e) { console.error('Widget import failed:', e); return; }
+  }
+  widgetMod.openWidget({
     t,
     getSnapshot: getWidgetSnapshot,
     onPrimary: () => {
@@ -452,17 +475,31 @@ function showView(name) {
   const sectorEl = $('mb-sector');
   if (sectorEl) sectorEl.textContent = t(SECTOR_KEY[name] || 'metaSectorHome');
 
+  // Refresh the view we're entering if data changed while it was off-screen.
+  if (viewDirty[name]) renderViewData(name);
+
   try { set3DMode(name); } catch (e) {}
   if (name === 'focus') renderFocusLauncher();
 }
 
 // ==========================================
-// RENDER ALL
+// RENDER ALL (lazy per-view)
 // ==========================================
+// Data-bearing views (home/calendar/archive). We render only the on-screen view
+// eagerly and mark the others dirty so they refresh when navigated to — this keeps
+// Archive/Planner off the hot path on every data change (matters as history grows).
+const viewDirty = { home: false, calendar: false, archive: false };
+
+function renderViewData(name) {
+  if (name === 'home') renderHome();
+  else if (name === 'calendar') renderPlanner();
+  else if (name === 'archive') renderArchive();
+  if (name in viewDirty) viewDirty[name] = false;
+}
+
 function renderAll() {
-  renderHome();
-  renderPlanner();
-  renderArchive();
+  renderViewData(currentView);
+  for (const v in viewDirty) { if (v !== currentView) viewDirty[v] = true; }
   updateI18nDOM();
 }
 
