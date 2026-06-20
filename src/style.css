@@ -980,7 +980,7 @@ body.auth-locked #app-overlay {
 .focus-setup-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.84fr);
-  gap: var(--s-3);
+  gap: var(--s-5);
   align-items: start;
 }
 .focus-draft,
@@ -990,10 +990,10 @@ body.auth-locked #app-overlay {
   backdrop-filter: blur(10px);
 }
 .focus-draft {
-  padding: var(--s-4);
+  padding: var(--s-5);
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-4);
 }
 .focus-field {
   display: grid;
@@ -1031,15 +1031,15 @@ body.auth-locked #app-overlay {
 .focus-draft-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--s-3);
+  gap: var(--s-4);
 }
 .focus-presets {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--s-2);
+  gap: var(--s-3);
 }
 .focus-preset {
-  min-height: 38px;
+  min-height: 42px;
   border: var(--border-solid);
   background: transparent;
   color: var(--text-muted);
@@ -1054,7 +1054,7 @@ body.auth-locked #app-overlay {
 .focus-draft-actions {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
-  gap: var(--s-2);
+  gap: var(--s-3);
 }
 .focus-draft-actions .action-btn { min-height: 46px; }
 .focus-launch-panel {
@@ -1317,7 +1317,7 @@ body.auth-locked #app-overlay {
 .planner-pane {
   background: rgba(15,15,15,0.72);
   border: var(--border-solid);
-  padding: var(--s-4);
+  padding: var(--s-5);
   min-width: 0;
 }
 
@@ -1455,7 +1455,7 @@ body.auth-locked #app-overlay {
 /* Console sections (planner right-pane) */
 .console-section {
   border-bottom: 1px solid var(--hairline);
-  padding: var(--s-3) 0;
+  padding: var(--s-4) 0;
 }
 .console-section:first-of-type { padding-top: 0; }
 .console-section:last-child { border-bottom: none; }
@@ -1467,7 +1467,7 @@ body.auth-locked #app-overlay {
   color: var(--text-dim);
   letter-spacing: var(--ls-status);
   text-transform: uppercase;
-  margin-bottom: var(--s-2);
+  margin-bottom: var(--s-3);
   display: flex; justify-content: space-between; align-items: center;
 }
 .console-add-btn {
@@ -1579,7 +1579,7 @@ body.auth-locked #app-overlay {
 
 /* Queue & AI sections */
 .queue-list, .scheduled-task-list, .ai-output-list {
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: var(--s-2);
 }
 .empty-queue-msg {
   text-align: center;
@@ -1672,7 +1672,7 @@ body.auth-locked #app-overlay {
    5. ARCHIVE
    ============================================ */
 .archive-wrap {
-  display: flex; flex-direction: column; gap: var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-5);
 }
 
 .arch-stats {
@@ -1683,10 +1683,10 @@ body.auth-locked #app-overlay {
   border: var(--border-solid);
 }
 .arch-stat {
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-4);
   background: var(--bg-surface);
   display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-2);
-  min-height: 64px;
+  min-height: 72px;
 }
 .arch-stat .lbl {
   font-family: var(--font-pixel-sm); font-size: var(--fs-tiny);
@@ -1904,7 +1904,7 @@ body.auth-locked #app-overlay {
 }
 .rcard {
   aspect-ratio: 1/1.05;
-  padding: var(--s-3);
+  padding: var(--s-4);
   display: flex; flex-direction: column; justify-content: space-between;
   cursor: pointer;
   position: relative;
