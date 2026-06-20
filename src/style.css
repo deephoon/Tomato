@@ -756,18 +756,18 @@ body.auth-locked #app-overlay {
 /* Home right-col panels — stacked on mobile, moved to rail on desktop */
 .right-col {
   display: flex; flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-4);
 }
 .panel {
   border: var(--border-solid);
   background: rgba(15,15,15,0.62);
   backdrop-filter: blur(6px);
-  padding: var(--s-4);
+  padding: var(--s-5);
   position: relative;
 }
 .panel .phd {
   display: flex; justify-content: space-between; align-items: baseline;
-  margin-bottom: var(--s-3);
+  margin-bottom: var(--s-4);
 }
 .panel h3 {
   margin: 0;
@@ -2251,7 +2251,7 @@ body.auth-locked #app-overlay {
     align-items: start;
   }
   .hero-col { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
-  .right-col { gap: var(--s-4); position: sticky; top: 0; }
+  .right-col { gap: var(--s-6); position: sticky; top: 0; }
 
   /* Planner: 2-col split */
   .planner-split {
