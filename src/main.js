@@ -25,7 +25,7 @@ import { signUpWithEmail, signInWithEmail, signOut } from './supabase/auth.servi
 import { getAuthRedirectTo, normalizeEmail, validateAuthInput } from './services/authValidation.service.js';
 import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
-import { exportData, importData } from './services/exportImport.service.js';
+import { applyTimerVisualState } from './services/timerVisualState.service.js';
 import { isPipSupported } from './utils/runtime.js';
 import { generateUuid } from './utils/id.js';
 // NOTE: keep this a STATIC import. The widget uses documentPictureInPicture
@@ -1607,71 +1607,6 @@ function bindSheet() {
 
 function bindArchive() {
   // Archive gallery clicks are bound in renderArchiveGrid
-  bindVault();
-}
-
-// ==========================================
-// DATA VAULT — Export / Import (exportImport.service)
-// ==========================================
-function setVaultStatus(key, tone = '') {
-  const el = $('vault-status');
-  if (!el) return;
-  el.textContent = key ? t(key) : '';
-  el.classList.remove('ok', 'error');
-  if (tone) el.classList.add(tone);
-}
-
-function bindVault() {
-  const btnExport = $('btn-export');
-  const btnImport = $('btn-import');
-  const fileInput = $('import-file');
-  if (!btnExport || !btnImport || !fileInput) return;
-
-  btnExport.onclick = () => {
-    if (!appState.auth.user) return;
-    if (appState.tasks.length === 0 && appState.history.length === 0) {
-      setVaultStatus('vaultNoData', 'error');
-      return;
-    }
-    const ok = exportData();
-    setVaultStatus(ok ? 'vaultExported' : 'vaultImportError', ok ? 'ok' : 'error');
-  };
-
-  btnImport.onclick = () => {
-    if (!appState.auth.user) return;
-    fileInput.value = '';
-    fileInput.click();
-  };
-
-  fileInput.onchange = () => {
-    const file = fileInput.files && fileInput.files[0];
-    if (!file) return;
-    setVaultStatus('vaultImporting');
-    const reader = new FileReader();
-    reader.onload = () => {
-      const applyImport = (opts) => {
-        const result = importData(String(reader.result || ''), opts);
-        if (result.requiresConfirmation) {
-          if (window.confirm(t('vaultImportMismatch'))) {
-            applyImport({ merge: false, forceDifferentUser: true });
-          } else {
-            setVaultStatus('', '');
-          }
-          return;
-        }
-        if (result.success) {
-          updateI18nDOM();
-          renderAll();
-          setVaultStatus('vaultImportSuccess', 'ok');
-        } else {
-          setVaultStatus('vaultImportError', 'error');
-        }
-      };
-      applyImport({ merge: false });
-    };
-    reader.onerror = () => setVaultStatus('vaultImportError', 'error');
-    reader.readAsText(file);
-  };
 }
 
 // ==========================================
@@ -1974,6 +1909,11 @@ function updateFocusHUD() {
   const running = appState.session.isRunning;
   const task = getActiveTask();
   const show = (el, visible) => { if (el) el.style.display = visible ? '' : 'none'; };
+
+  applyTimerVisualState({
+    focusScreen: $('view-focus'),
+    breakScreen: $('view-break')
+  }, appState.session);
 
   // Offer the floating PiP widget whenever a timed block is in progress.
   show($('btn-open-widget'), isPipSupported() && mode === 'focus' && remaining > 0);
