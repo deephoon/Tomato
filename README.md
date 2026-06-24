@@ -188,7 +188,10 @@ Tomato/
 ```bash
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+VITE_BASE_PATH=/Tomato/
 ```
+
+`VITE_BASE_PATH`는 배포 경로용입니다. GitHub Pages 프로젝트 사이트는 `/Tomato/`를 사용하고, 커스텀 도메인 루트 배포 시에는 `/`로 바꿉니다.
 
 ### 명령
 ```bash
@@ -201,7 +204,23 @@ npm run test:watch
 ```
 
 ### 배포
-`main` 브랜치 push → `.github/workflows/web-deploy.yml`이 **`npm test` → `npm run build` → GitHub Pages** 순으로 배포합니다. Supabase 키는 repo secrets(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)로 주입됩니다.
+무료 배포 1순위는 **GitHub Pages + Supabase Free**입니다.
+
+* 배포 URL: `https://deephoon.github.io/Tomato/`
+* GitHub Actions: `main` 브랜치 push → `.github/workflows/web-deploy.yml`이 **`npm test` → `npm run build` → GitHub Pages** 순으로 배포
+* GitHub Secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+* Supabase Auth URL Configuration
+  * Site URL: `https://deephoon.github.io/Tomato/`
+  * Additional Redirect URLs: `https://deephoon.github.io/Tomato/**`, `http://localhost:5173/**`
+
+첫 배포 전 체크:
+```bash
+npm test
+npm run build
+git push origin main
+```
+
+GitHub Pages 설정에서 `gh-pages` 브랜치의 `/`를 publishing source로 선택하면 됩니다.
 
 ---
 
