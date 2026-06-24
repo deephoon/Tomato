@@ -27,6 +27,7 @@ const DEFAULT_SESSION = {
 // Returns a promise
 export async function getSession(userId) {
   if (!userId) return getLocalCache(null);
+  if (!supabase) return getLocalCache(userId);
   
   const { data, error } = await supabase
     .from('current_sessions')
@@ -54,6 +55,7 @@ export async function getSession(userId) {
 export async function saveSession(userId, session) {
   if (!userId) return false;
   saveLocalCache(userId, session); // Immediate local cache update
+  if (!supabase) return false;
   
   const payload = sessionToDb(userId, session);
   const { error } = await supabase

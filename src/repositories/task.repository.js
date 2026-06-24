@@ -1,7 +1,7 @@
 import { supabase } from '../supabase/client.js';
 
 export async function getTasks(userId, targetDate) {
-  if (!userId) return [];
+  if (!userId || !supabase) return [];
   let query = supabase.from('focus_tasks').select('*').eq('user_id', userId);
   if (targetDate) query = query.eq('target_date', targetDate);
   query = query.order('task_order', { ascending: true });
@@ -15,7 +15,7 @@ export async function getTasks(userId, targetDate) {
 }
 
 export async function saveTasks(userId, tasks) {
-  if (!userId || !tasks.length) return false;
+  if (!userId || !tasks.length || !supabase) return false;
   const payload = tasks.map((t, idx) => taskToDb(userId, { ...t, order: idx }));
   
   const { error } = await supabase.from('focus_tasks').upsert(payload, { onConflict: 'id' });
@@ -27,7 +27,7 @@ export async function saveTasks(userId, tasks) {
 }
 
 export async function updateTask(userId, taskId, patch) {
-  if (!userId || !taskId) return false;
+  if (!userId || !taskId || !supabase) return false;
   const { error } = await supabase.from('focus_tasks').update(patchToDb(patch)).eq('id', taskId).eq('user_id', userId);
   if (error) {
     console.error('Error updating task:', error);
@@ -37,7 +37,7 @@ export async function updateTask(userId, taskId, patch) {
 }
 
 export async function deleteTask(userId, taskId) {
-  if (!userId || !taskId) return false;
+  if (!userId || !taskId || !supabase) return false;
   const { error } = await supabase.from('focus_tasks').delete().eq('id', taskId).eq('user_id', userId);
   if (error) {
     console.error('Error deleting task:', error);

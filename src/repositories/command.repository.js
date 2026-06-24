@@ -1,7 +1,7 @@
 import { supabase } from '../supabase/client.js';
 
 export async function insertCommand({ userId, command, payload, issuedBy, idempotencyKey }) {
-  if (!userId) return false;
+  if (!userId || !supabase) return false;
   
   const { error } = await supabase.from('session_commands').insert({
     user_id: userId,
@@ -23,7 +23,7 @@ export async function insertCommand({ userId, command, payload, issuedBy, idempo
 }
 
 export async function listPendingCommands(userId) {
-  if (!userId) return [];
+  if (!userId || !supabase) return [];
   const { data, error } = await supabase
     .from('session_commands')
     .select('*')
@@ -39,7 +39,7 @@ export async function listPendingCommands(userId) {
 }
 
 export async function markCommandProcessed(userId, commandId) {
-  if (!userId || !commandId) return false;
+  if (!userId || !commandId || !supabase) return false;
   const { error } = await supabase
     .from('session_commands')
     .update({ status: 'processed', processed_at: new Date().toISOString() })

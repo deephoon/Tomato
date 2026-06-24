@@ -1,7 +1,7 @@
 import { supabase } from '../supabase/client.js';
 
 export async function getHistory(userId, targetDate) {
-  if (!userId) return [];
+  if (!userId || !supabase) return [];
   let query = supabase.from('focus_history').select('*').eq('user_id', userId);
   if (targetDate) query = query.eq('target_date', targetDate);
   query = query.order('completed_at', { ascending: true });
@@ -21,7 +21,7 @@ export async function saveHistory(userId, history) {
 }
 
 export async function appendHistory(userId, item) {
-  if (!userId) return false;
+  if (!userId || !supabase) return false;
   
   const payload = historyToDb(userId, item);
   const { error } = await supabase.from('focus_history').insert(payload);
@@ -39,7 +39,7 @@ export async function appendHistory(userId, item) {
 }
 
 export async function updateHistoryItem(userId, historyId, patch) {
-  if (!userId || !historyId) return false;
+  if (!userId || !historyId || !supabase) return false;
   const { error } = await supabase.from('focus_history').update({ reflection: patch.reflection }).eq('id', historyId).eq('user_id', userId);
   if (error) {
     console.error('Error updating history:', error);

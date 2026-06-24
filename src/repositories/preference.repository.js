@@ -13,6 +13,7 @@ const DEFAULT_PREFERENCES = {
 
 export async function getPreferences(userId) {
   if (!userId) return getLocalCache(null);
+  if (!supabase) return getLocalCache(userId);
   
   const { data, error } = await supabase
     .from('user_preferences')
@@ -33,6 +34,7 @@ export async function getPreferences(userId) {
 export async function savePreferences(userId, preferences) {
   if (!userId) return false;
   saveLocalCache(userId, preferences);
+  if (!supabase) return false;
   
   const payload = prefToDb(userId, preferences);
   const { error } = await supabase
