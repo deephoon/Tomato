@@ -12,8 +12,8 @@
   <!-- Pixel type system: Silkscreen (Latin) + Galmuri (Korean). Unified pixel look. -->
   <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css" rel="stylesheet">
-  <script type="module" crossorigin src="/Tomato/assets/index-CGDDYE7V.js"></script>
-  <link rel="stylesheet" crossorigin href="/Tomato/assets/index-2VAteuek.css">
+  <script type="module" crossorigin src="/Tomato/assets/index-6TloxNdk.js"></script>
+  <link rel="stylesheet" crossorigin href="/Tomato/assets/index-DOeTlCYN.css">
 </head>
 <body>
   <div id="canvas-container"></div>
@@ -359,16 +359,6 @@
           </div>
         </div>
         <div id="archive-gallery"></div>
-        <div class="arch-vault">
-          <div class="av-label" data-i18n="vaultLabel">RESTORE FILE</div>
-          <div class="av-help" data-i18n="vaultHelp">Downloads a restore file for moving or recovering your data.</div>
-          <div class="av-actions">
-            <button class="vault-btn" id="btn-export" type="button" data-i18n="vaultExport">[ ⬇ SAVE RESTORE FILE ]</button>
-            <button class="vault-btn" id="btn-import" type="button" data-i18n="vaultImport">[ ⬆ LOAD RESTORE FILE ]</button>
-            <input type="file" id="import-file" accept="application/json,.json" hidden />
-          </div>
-          <div class="av-status" id="vault-status"></div>
-        </div>
       </div>
     </section>
 
@@ -398,7 +388,7 @@
       </div>
     </div>
 
-    <!-- EDIT MODAL (task add/edit with inline AI) -->
+    <!-- EDIT MODAL (task add/edit with inline task splitting) -->
     <div class="modal-overlay hidden" id="edit-modal">
       <div class="modal-box">
         <h3 class="modal-title" data-i18n="modalTitle">[ RECONFIGURE SIGNAL ]</h3>
@@ -422,17 +412,17 @@
         </div>
         <input type="hidden" id="edit-task-id" />
 
-        <!-- AI Subdivision (inline, expandable) -->
+        <!-- Task breakdown (inline, expandable) -->
         <div class="ai-subdivide-section hidden" id="ai-subdivide-section">
-          <div class="console-section-label" style="margin-bottom:0.8rem;" data-i18n="aiSubdivision">AI SUBDIVISION</div>
+          <div class="console-section-label" style="margin-bottom:0.8rem;" data-i18n="aiSubdivision">TASK BREAKDOWN</div>
           <div class="ai-subdivide-output" id="ai-subdivide-output"></div>
         </div>
 
         <div class="modal-actions">
           <button class="interactable action-btn btn-primary" id="btn-modal-save" data-i18n="btnConfirm">[ CONFIRM ]</button>
-          <button class="interactable action-btn secondary-btn" id="btn-modal-ai-subdivide" data-i18n="btnAISubdivide">[ AI SUBDIVIDE ]</button>
+          <button class="interactable action-btn secondary-btn" id="btn-modal-ai-subdivide" data-i18n="btnAISubdivide">[ SPLIT TASK ]</button>
           <button class="interactable action-btn" id="btn-modal-cancel" data-i18n="btnAbort">[ ABORT ]</button>
-          <button class="interactable action-btn btn-danger" id="btn-modal-delete" data-i18n="btnDelete">[ DECOMMISSION ]</button>
+          <button class="interactable action-btn btn-danger" id="btn-modal-delete" data-i18n="btnDelete">[ DELETE ]</button>
         </div>
       </div>
     </div>
