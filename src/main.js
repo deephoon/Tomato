@@ -27,6 +27,7 @@ import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
 import { isPipSupported } from './utils/runtime.js';
+import { generateUuid } from './utils/id.js';
 // NOTE: keep this a STATIC import. The widget uses documentPictureInPicture
 // .requestWindow(), which needs transient user activation — awaiting a dynamic
 // import() inside the click handler consumes the gesture and the window never opens.
@@ -1021,7 +1022,7 @@ function createTaskFromFocusDraft({ startNow = false } = {}) {
   }
 
   const task = {
-    id: 't_' + Date.now().toString().slice(-6) + Math.random().toString(36).slice(2, 4),
+    id: generateUuid(),
     title: draft.title.toUpperCase(),
     focusMinutes: draft.focusMinutes,
     breakMinutes: draft.breakMinutes,
@@ -1576,7 +1577,7 @@ function reExecuteRitual(record) {
   const now = new Date();
   const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const newTask = {
-    id: 't_' + Date.now().toString().slice(-6),
+    id: generateUuid(),
     title: record.title || 'RITUAL',
     focusMinutes: record.focusMinutes || 25,
     breakMinutes: record.breakMinutes || 5,
@@ -1751,7 +1752,7 @@ function bindModal() {
       }
     } else {
       appState.tasks.push({
-        id: 't_' + Date.now().toString().slice(-6),
+        id: generateUuid(),
         title, focusMinutes: focusMin, breakMinutes: breakMin,
         status: 'open', timeLabel, targetDate: currentModalDate,
         order: appState.tasks.length
@@ -1844,7 +1845,7 @@ function applySubdivision() {
   blocks.forEach(b => {
     const timeLabel = `${String(hr).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
     appState.tasks.push({
-      id: 't_' + Date.now().toString().slice(-6) + Math.random().toString(36).slice(2, 4),
+      id: generateUuid(),
       title: b.title.toUpperCase(),
       focusMinutes: b.dur,
       breakMinutes: 5,

@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { getFirstRitualCandidate, getTodayOpenTasks, createQuickStartTask } from '../services/ritualStarter.service.js';
 
 describe('ritualStarter.service', () => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
   it('should recommend the open task with lowest order for today', () => {
     const tasks = [
       { id: '1', title: 'Task 1', status: 'done', targetDate: '2026-04-20', order: 0 },
@@ -40,5 +42,6 @@ describe('ritualStarter.service', () => {
     expect(task.targetDate).toBe('2026-04-20');
     expect(task.order).toBe(-1);
     expect(task.status).toBe('active');
+    expect(task.id).toMatch(uuidRegex);
   });
 });

@@ -1,4 +1,4 @@
-import { generateId } from '../utils/id.js';
+import { generateUuid } from '../utils/id.js';
 
 export function getTodayOpenTasks(tasks, todayDate) {
   if (!tasks || !Array.isArray(tasks)) return [];
@@ -24,7 +24,7 @@ export function getFirstRitualCandidate(tasks, todayDate) {
 
 export function createQuickStartTask({ title, focusMinutes, breakMinutes, todayDate }) {
   return {
-    id: generateId('t'),
+    id: generateUuid(),
     title: title || '이름 없는 집중',
     focusMinutes: focusMinutes || 25,
     breakMinutes: breakMinutes || 5,

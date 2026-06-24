@@ -1859,6 +1859,11 @@ body.auth-locked #app-overlay {
   letter-spacing: var(--ls-status); text-transform: uppercase;
   padding-right: var(--s-3); border-right: 1px solid var(--hairline);
 }
+.arch-vault .av-help {
+  color: var(--text-muted);
+  line-height: 1.45;
+  max-width: 360px;
+}
 .av-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
 .vault-btn {
   min-height: 32px;

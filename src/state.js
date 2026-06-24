@@ -5,6 +5,7 @@ import * as sessionRepo from './repositories/session.repository.js';
 import * as prefRepo from './repositories/preference.repository.js';
 import { getTodayStr } from './utils/dateTime.js';
 import { safeParse } from './utils/safeStorage.js';
+import { normalizeTaskIds } from './services/taskIdentity.service.js';
 
 let syncedWidgetUser = null;
 
@@ -110,6 +111,7 @@ function checkDayRollover() {
 export function saveTasks() {
   const user = getRuntimeUser();
   if (!user) return;
+  normalizeTaskIds(appState.tasks, { session: appState.session });
   taskRepo.saveTasks(user.id, appState.tasks).catch(e => console.error(e));
   broadcastSync('tasks', appState.tasks);
 }

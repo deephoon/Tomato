@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { appState } from '../state.js';
-import { importData } from '../services/exportImport.service.js';
+import { buildBackupFilename, importData } from '../services/exportImport.service.js';
+
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 describe('exportImport.service', () => {
   beforeEach(() => {
@@ -42,7 +44,7 @@ describe('exportImport.service', () => {
     const result = importData(validJson);
     expect(result.success).toBe(true);
     expect(appState.tasks.length).toBe(1);
-    expect(appState.tasks[0].id).toBe('t1');
+    expect(appState.tasks[0].id).toMatch(uuidRegex);
   });
 
   it('handles user ID mismatch if forced', () => {
@@ -60,5 +62,10 @@ describe('exportImport.service', () => {
     
     const resultForce = importData(validJson, { forceDifferentUser: true });
     expect(resultForce.success).toBe(true);
+  });
+
+  it('uses a human-readable backup filename', () => {
+    expect(buildBackupFilename('user-123', new Date('2026-06-24T12:00:00Z')))
+      .toBe('tomato-restore-file-20260624.json');
   });
 });

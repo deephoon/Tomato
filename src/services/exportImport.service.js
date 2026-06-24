@@ -20,8 +20,7 @@ export function exportData() {
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const filename = `tomato-backup-${user.id}-${dateStr}.json`;
+  const filename = buildBackupFilename(user.id);
 
   const a = document.createElement('a');
   a.href = url;
@@ -32,6 +31,11 @@ export function exportData() {
   URL.revokeObjectURL(url);
   
   return true;
+}
+
+export function buildBackupFilename(userId, now = new Date()) {
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  return `tomato-restore-file-${dateStr}.json`;
 }
 
 export function importData(jsonString, options = { merge: false }) {

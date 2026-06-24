@@ -48,7 +48,7 @@ Tomato/
 │  ├─ main.js                  # (~2,160줄) 모든 render*/bind* + 뷰 전환. DOM의 단일 소유자
 │  ├─ state.js                 # appState 단일 스토어 + 영속화 + BroadcastChannel 동기화
 │  ├─ timer.js                 # Date.now() 기반 정밀 타이머, 집중 완료 시 history 기록
-│  ├─ i18n.js                  # en/ko 사전 (각 206키, 완전 정합)
+│  ├─ i18n.js                  # en/ko 사전 (각 207키, 완전 정합)
 │  ├─ three-scene.js           # 3D 모노리스 배경 (three+gsap, 지연 로드 대상)
 │  ├─ style.css                # (~2,630줄) 디자인 토큰 + 전 화면 스타일
 │  │
@@ -171,7 +171,7 @@ Tomato/
 * **타이포그래피** — 픽셀 폰트 통일(Silkscreen+Galmuri), 한글 픽셀 폰트 실제 로드, 가독성 위해 타입 스케일 상향.
 * **여백/배치** — Home·Focus·Planner·Archive 패널 패딩·카드 간격을 동일 토큰으로 통일.
 * **실제 시간 반영** — Home 통계를 계획 시간이 아닌 실제 집중 시간(`actualSeconds`) 기준으로 일원화(Archive와 일치).
-* **i18n** — en/ko 키 완전 정합(206/206), 영어에서 raw 키 노출되던 버그 수정.
+* **i18n** — en/ko 키 완전 정합(207/207), 영어에서 raw 키 노출되던 버그 수정.
 * **위젯 안정화** — 지연 로드가 깨뜨렸던 PiP 열림(사용자 제스처) 회귀 수정.
 * **PWA 정리** — 등록·링크되지 않던 sw.js/manifest 제거. **현재 빌드는 일반 웹앱**(오프라인/설치형 PWA 미구현).
 * **하네스/CI** — 배포 전 `npm test` 게이트 추가(Node 20), 안전 명령 allowlist 정리, 완료 시 테스트 검증 훅.

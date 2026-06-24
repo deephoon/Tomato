@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client.js';
+import { dedupeTasksBySignature, normalizeTaskIds } from '../services/taskIdentity.service.js';
 
 export async function getTasks(userId, targetDate) {
   if (!userId || !supabase) return [];
@@ -11,18 +12,34 @@ export async function getTasks(userId, targetDate) {
     console.error('Error fetching tasks:', error);
     return [];
   }
-  return data.map(dbToTask);
+  return dedupeTasksBySignature(data.map(dbToTask));
 }
 
 export async function saveTasks(userId, tasks) {
-  if (!userId || !tasks.length || !supabase) return false;
-  const payload = tasks.map((t, idx) => taskToDb(userId, { ...t, order: idx }));
+  if (!userId || !supabase) return false;
+  const currentTasks = Array.isArray(tasks) ? tasks : [];
+  normalizeTaskIds(currentTasks);
+  const payload = currentTasks.map((t, idx) => taskToDb(userId, { ...t, order: idx }));
   
-  const { error } = await supabase.from('focus_tasks').upsert(payload, { onConflict: 'id' });
-  if (error) {
-    console.error('Error saving tasks:', error);
+  if (payload.length > 0) {
+    const { error } = await supabase.from('focus_tasks').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      console.error('Error saving tasks:', error);
+      return false;
+    }
+  }
+
+  const ids = payload.map(row => row.id).filter(Boolean);
+  let deleteQuery = supabase.from('focus_tasks').delete().eq('user_id', userId);
+  if (ids.length > 0) {
+    deleteQuery = deleteQuery.not('id', 'in', `(${ids.join(',')})`);
+  }
+  const { error: deleteError } = await deleteQuery;
+  if (deleteError) {
+    console.error('Error deleting removed tasks:', deleteError);
     return false;
   }
+
   return true;
 }
 
@@ -62,8 +79,8 @@ function dbToTask(row) {
 }
 
 function taskToDb(userId, task) {
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.id);
   const row = {
+    id: task.id,
     user_id: userId,
     title: task.title,
     focus_minutes: task.focusMinutes || 25,
@@ -73,7 +90,6 @@ function taskToDb(userId, task) {
     task_order: task.order || 0,
     source: task.source || 'manual'
   };
-  if (isUUID) row.id = task.id;
   return row;
 }
 
