@@ -22,6 +22,7 @@ function set3DMode(name) { try { threeScene && threeScene.set3DMode(name); } cat
 function triggerRitualManeuver() { try { threeScene && threeScene.triggerRitualManeuver(); } catch (e) {} }
 import { dict } from './i18n.js';
 import { signUpWithEmail, signInWithEmail, signOut } from './supabase/auth.service.js';
+import { getAuthRedirectTo, normalizeEmail, validateAuthInput } from './services/authValidation.service.js';
 import { getNextFocusCandidate } from './services/focusFlow.service.js';
 import { syncWidgetState } from './services/widgetSync.service.js';
 import { exportData, importData } from './services/exportImport.service.js';
@@ -255,13 +256,18 @@ function bindAuth() {
     };
   }
   if (logoutBtn) {
-    logoutBtn.onclick = () => {
+    logoutBtn.onclick = async () => {
       resetSession();
-      signOut();
-      reloadForCurrentUser();
-      updateAuthUI();
-      renderAll();
-      showView('home');
+      try {
+        await signOut();
+      } catch (err) {
+        console.error('Sign out failed:', err);
+      } finally {
+        await reloadForCurrentUser();
+        updateAuthUI();
+        renderAll();
+        showView('home');
+      }
     };
   }
   if (langBtn) {
@@ -297,14 +303,28 @@ async function handleAuthSubmit(event) {
 
   try {
     const validation = validateAuthInput(email, password);
-    if (authMode === 'signup' && !validation.ok) {
+    if (!validation.ok) {
       throw new Error(validation.messageKey);
     }
+
+    const cleanEmail = normalizeEmail(email);
     
     if (authMode === 'signup') {
-      await signUpWithEmail(email, password, displayName);
+      await signUpWithEmail(cleanEmail, password, displayName, {
+        redirectTo: getAuthRedirectTo()
+      });
+      authMode = 'signin';
+      if ($('auth-email')) $('auth-email').value = cleanEmail;
+      if ($('auth-password')) $('auth-password').value = '';
+      if ($('auth-display')) $('auth-display').value = '';
+      updateAuthUI();
+      if (message) {
+        message.textContent = t('authCheckEmail');
+        message.classList.add('ok');
+      }
+      return;
     } else {
-      await signInWithEmail(email, password);
+      await signInWithEmail(cleanEmail, password);
     }
     claimLegacyDataForCurrentUser();
     reloadForCurrentUser();
@@ -394,21 +414,6 @@ function updateAuthUI() {
   }
 }
 
-
-function validateAuthInput(email, password) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const hasLetter = /[a-zA-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  return {
-    handleOk: emailRegex.test(email),
-    lengthOk: password.length >= 8,
-    mixOk: hasLetter && hasNumber,
-    ok: emailRegex.test(email) && password.length >= 8 && hasLetter && hasNumber,
-    messageKey: !emailRegex.test(email) ? 'authErrorHandleRule' :
-                password.length < 8 ? 'authErrorPasswordLength' :
-                !(hasLetter && hasNumber) ? 'authErrorPasswordMix' : null
-  };
-}
 
 function updateAuthRules() {
   const email = $('auth-email')?.value || '';
@@ -1535,8 +1540,10 @@ function openRitualSheet(record) {
   if (sheetRef) sheetRef.textContent = `"${noteText}"`;
 
   // Action handlers
-  $('btn-sheet-plan').onclick = () => navigateToPlannerDate(record.targetDate || record.date);
-  $('btn-sheet-reexec').onclick = () => reExecuteRitual(record);
+  const btnSheetPlan = $('btn-sheet-plan');
+  const btnSheetReexec = $('btn-sheet-reexec');
+  if (btnSheetPlan) btnSheetPlan.onclick = () => navigateToPlannerDate(record.targetDate || record.date);
+  if (btnSheetReexec) btnSheetReexec.onclick = () => reExecuteRitual(record);
 
   backdrop.classList.remove('hidden');
 }
@@ -1813,8 +1820,10 @@ function runAISubdivide(btnAI) {
     btnAI.textContent = originalText;
     btnAI.style.pointerEvents = '';
 
-    $('btn-sub-apply').onclick = () => applySubdivision();
-    $('btn-sub-regen').onclick = () => runAISubdivide(btnAI);
+    const btnSubApply = $('btn-sub-apply');
+    const btnSubRegen = $('btn-sub-regen');
+    if (btnSubApply) btnSubApply.onclick = () => applySubdivision();
+    if (btnSubRegen) btnSubRegen.onclick = () => runAISubdivide(btnAI);
   }, 600);
 }
 

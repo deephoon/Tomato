@@ -4,6 +4,7 @@ import * as historyRepo from './repositories/history.repository.js';
 import * as sessionRepo from './repositories/session.repository.js';
 import * as prefRepo from './repositories/preference.repository.js';
 import { getTodayStr } from './utils/dateTime.js';
+import { safeParse } from './utils/safeStorage.js';
 
 let syncedWidgetUser = null;
 
@@ -274,24 +275,32 @@ export function claimLegacyDataForCurrentUser() {
   
   const legacyTasks = localStorage.getItem(LEGACY_STORAGE_KEY);
   if (legacyTasks && appState.tasks.length === 0) {
-    appState.tasks = JSON.parse(legacyTasks);
-    saveTasks();
-    copied = true;
+    const parsedTasks = safeParse(legacyTasks, []);
+    if (parsedTasks.length > 0) {
+      appState.tasks = parsedTasks;
+      saveTasks();
+      copied = true;
+    }
   }
   
   const legacyHistory = localStorage.getItem(LEGACY_HISTORY_KEY);
   if (legacyHistory && appState.history.length === 0) {
-    appState.history = JSON.parse(legacyHistory);
-    saveHistory();
-    copied = true;
+    const parsedHistory = safeParse(legacyHistory, []);
+    if (parsedHistory.length > 0) {
+      appState.history = parsedHistory;
+      saveHistory();
+      copied = true;
+    }
   }
   
   const legacySession = localStorage.getItem(LEGACY_SESSION_KEY);
   if (legacySession) {
-    const parsed = JSON.parse(legacySession);
-    appState.session = { ...appState.session, ...parsed };
-    saveSession();
-    copied = true;
+    const parsedSession = safeParse(legacySession, null);
+    if (parsedSession) {
+      appState.session = { ...appState.session, ...parsedSession };
+      saveSession();
+      copied = true;
+    }
   }
 
   if (copied) localStorage.setItem(LEGACY_CLAIM_KEY, user.id);

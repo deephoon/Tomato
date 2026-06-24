@@ -48,8 +48,7 @@ Tomato/
 │  ├─ main.js                  # (~2,160줄) 모든 render*/bind* + 뷰 전환. DOM의 단일 소유자
 │  ├─ state.js                 # appState 단일 스토어 + 영속화 + BroadcastChannel 동기화
 │  ├─ timer.js                 # Date.now() 기반 정밀 타이머, 집중 완료 시 history 기록
-│  ├─ i18n.js                  # en/ko 사전 (각 202키, 완전 정합)
-│  ├─ auth.js                  # 인증 UI 상태/규칙 헬퍼
+│  ├─ i18n.js                  # en/ko 사전 (각 206키, 완전 정합)
 │  ├─ three-scene.js           # 3D 모노리스 배경 (three+gsap, 지연 로드 대상)
 │  ├─ style.css                # (~2,630줄) 디자인 토큰 + 전 화면 스타일
 │  │
@@ -78,7 +77,7 @@ Tomato/
 │  │
 │  ├─ supabase/
 │  │  ├─ client.js                   # Supabase 클라이언트 (env 키)
-│  │  └─ auth.service.js             # 이메일 회원가입/로그인/로그아웃
+│  │  └─ auth.service.js             # 이메일 확인 기반 회원가입/로그인/로그아웃
 │  │
 │  ├─ widget/
 │  │  └─ pip.js                      # Document PiP 플로팅 위젯 (원형 진행 링 + CRT)
@@ -172,7 +171,7 @@ Tomato/
 * **타이포그래피** — 픽셀 폰트 통일(Silkscreen+Galmuri), 한글 픽셀 폰트 실제 로드, 가독성 위해 타입 스케일 상향.
 * **여백/배치** — Home·Focus·Planner·Archive 패널 패딩·카드 간격을 동일 토큰으로 통일.
 * **실제 시간 반영** — Home 통계를 계획 시간이 아닌 실제 집중 시간(`actualSeconds`) 기준으로 일원화(Archive와 일치).
-* **i18n** — en/ko 키 완전 정합(202/202), 영어에서 raw 키 노출되던 버그 수정.
+* **i18n** — en/ko 키 완전 정합(206/206), 영어에서 raw 키 노출되던 버그 수정.
 * **위젯 안정화** — 지연 로드가 깨뜨렸던 PiP 열림(사용자 제스처) 회귀 수정.
 * **PWA 정리** — 등록·링크되지 않던 sw.js/manifest 제거. **현재 빌드는 일반 웹앱**(오프라인/설치형 PWA 미구현).
 * **하네스/CI** — 배포 전 `npm test` 게이트 추가(Node 20), 안전 명령 allowlist 정리, 완료 시 테스트 검증 훅.
@@ -212,6 +211,11 @@ npm run test:watch
 * Supabase Auth URL Configuration
   * Site URL: `https://deephoon.github.io/Tomato/`
   * Additional Redirect URLs: `https://deephoon.github.io/Tomato/**`, `http://localhost:5173/**`
+* Supabase Auth Providers
+  * Email provider: enabled
+  * Confirm email: enabled
+  * Confirm email이 꺼져 있으면 앱은 로그인/회원가입을 차단합니다.
+  * 회원가입 직후 앱은 자동 로그인하지 않고 확인 메일 안내를 표시합니다. 확인되지 않은 이메일 세션은 앱에서 즉시 로그아웃 처리됩니다.
 
 첫 배포 전 체크:
 ```bash
