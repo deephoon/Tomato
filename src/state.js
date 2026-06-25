@@ -6,6 +6,7 @@ import * as prefRepo from './repositories/preference.repository.js';
 import { getTodayStr } from './utils/dateTime.js';
 import { safeParse } from './utils/safeStorage.js';
 import { normalizeTaskIds, shouldSkipTaskPersist } from './services/taskIdentity.service.js';
+import { trackWrite } from './services/syncStatus.service.js';
 
 let syncedWidgetUser = null;
 
@@ -114,7 +115,7 @@ export function saveTasks() {
   // Never let an empty list wipe remote tasks before the cloud state has loaded.
   if (shouldSkipTaskPersist({ isCloudLoaded: appState.isCloudLoaded, taskCount: appState.tasks.length })) return;
   normalizeTaskIds(appState.tasks, { session: appState.session });
-  taskRepo.saveTasks(user.id, appState.tasks).catch(e => console.error(e));
+  trackWrite(taskRepo.saveTasks(user.id, appState.tasks));
   broadcastSync('tasks', appState.tasks);
 }
 
@@ -122,7 +123,7 @@ export function appendHistoryItem(item) {
   appState.history.push(item);
   const user = getRuntimeUser();
   if (user) {
-    historyRepo.appendHistory(user.id, item).catch(e => console.error(e));
+    trackWrite(historyRepo.appendHistory(user.id, item));
   }
   broadcastSync('history-append', item);
 }
@@ -133,7 +134,7 @@ export function updateHistoryReflection(historyId, reflection) {
     item.reflection = reflection;
     const user = getRuntimeUser();
     if (user) {
-      historyRepo.updateHistoryItem(user.id, historyId, { reflection }).catch(e => console.error(e));
+      trackWrite(historyRepo.updateHistoryItem(user.id, historyId, { reflection }));
     }
     broadcastSync('history-update', { id: historyId, reflection });
   }
@@ -144,7 +145,7 @@ export function saveHistory() {
   if (!user) return;
   // History is mostly append-only, but if we need to sync full array we can.
   // Actually, saveHistory here is just local cache update if needed.
-  historyRepo.saveHistory(user.id, appState.history).catch(e => console.error(e));
+  trackWrite(historyRepo.saveHistory(user.id, appState.history));
   broadcastSync('history', appState.history);
 }
 
@@ -171,7 +172,7 @@ export function saveSession() {
     completionKey: appState.session.completionKey || null,
     completedHistoryId: appState.session.completedHistoryId || null
   };
-  sessionRepo.saveSession(user.id, payload).catch(e => console.error(e));
+  trackWrite(sessionRepo.saveSession(user.id, payload));
   broadcastSync('session', payload);
 }
 

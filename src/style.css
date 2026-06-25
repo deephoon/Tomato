@@ -252,6 +252,21 @@ body.scrolled .meta-bar { border-bottom-color: var(--hairline); }
   transition: color .15s, border-color .15s;
 }
 .mb-sector .lang-toggle:hover { color: var(--text-primary); border-color: var(--hairline-3); }
+.sync-status {
+  font-family: var(--font-pixel-sm);
+  font-size: var(--fs-status);
+  letter-spacing: var(--ls-status);
+  padding: 2px 6px;
+  border: 1px solid var(--hairline);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sync-status[hidden] { display: none; }
+.sync-status.sync-offline { color: var(--text-muted); border-color: var(--hairline-3); }
+.sync-status.sync-syncing { color: var(--text-muted); opacity: 0.85; }
+.sync-status.sync-error { color: var(--hero-red); border-color: rgba(251, 54, 64, 0.5); }
+.sync-status.sync-error.interactable { cursor: pointer; }
+.sync-status.sync-error:hover { color: var(--text-primary); border-color: var(--hero-red); }
 .auth-user-badge {
   color: var(--break-green);
   border-color: rgba(46, 204, 113, 0.28);

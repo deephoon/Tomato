@@ -34,6 +34,7 @@ import { generateUuid } from './utils/id.js';
 // import() inside the click handler consumes the gesture and the window never opens.
 import { openWidget, updateWidget, isWidgetOpen } from './widget/pip.js';
 import { generateSubdivisionBlocks } from './services/subdivide.service.js';
+import { getSyncStatus, clearSyncFailure } from './services/syncStatus.service.js';
 import {
   getTotalFocusMinutes,
   getCurrentStreak,
@@ -68,6 +69,7 @@ function updateI18nDOM() {
   if (langBtn) {
     langBtn.textContent = appState.prefs.lang === 'ko' ? 'EN / KR*' : 'EN* / KR';
   }
+  renderSyncStatus(); // labels are i18n-driven; refresh on every language change
   const authLangBtn = document.getElementById('btn-auth-lang-toggle');
   if (authLangBtn) {
     authLangBtn.textContent = appState.prefs.lang === 'ko' ? 'EN / KR*' : 'EN* / KR';
@@ -156,6 +158,32 @@ window.addEventListener('tomato:userchange', () => {
   updateFocusHUD();
 });
 
+// --- Sync status indicator (meta bar) ---
+function renderSyncStatus(status) {
+  const el = $('sync-status');
+  if (!el) return;
+  const s = status || getSyncStatus();
+  el.textContent = t(s.key);
+  el.className = `sync-status sync-${s.tone}${s.actionable ? ' interactable' : ''}`;
+  // Keep the bar clean: only surface when something needs attention.
+  el.hidden = s.tone === 'ok';
+  el.title = s.actionable ? t(s.key) : '';
+}
+
+function bindSyncStatus() {
+  window.addEventListener('tomato:sync-status', (e) => renderSyncStatus(e.detail));
+  const el = $('sync-status');
+  if (el) el.onclick = () => {
+    if (!getSyncStatus().actionable) return;
+    clearSyncFailure();
+    // Re-issue the primary writes + flush the offline command queue.
+    saveTasks();
+    saveSession();
+    processQueue();
+  };
+  renderSyncStatus();
+}
+
 function init() {
   // Defer the 3D atmosphere until the UI has painted — keeps three/gsap off the
   // critical path so first interaction isn't blocked on WebGL init.
@@ -178,6 +206,7 @@ function init() {
   initPlannerNav();
   bindSheet();
   bindWidgetControls();
+  bindSyncStatus();
 
   updateI18nDOM();
   updateAuthUI();

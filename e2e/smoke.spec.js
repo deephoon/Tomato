@@ -72,6 +72,23 @@ test.describe('boot & auth-gate (no login required)', () => {
 
     await expect(title).not.toHaveText(before || '');
   });
+
+  test('오프라인이 되면 메타바에 동기화 상태가 표시된다', async ({ page, context }) => {
+    await page.goto('/');
+
+    // 동기화 정상/유휴 상태에서는 배지가 숨겨져 있다.
+    const pill = page.locator('#sync-status');
+    await expect(pill).toBeHidden();
+
+    // 네트워크가 끊기면 OFFLINE 배지가 나타난다.
+    await context.setOffline(true);
+    await expect(pill).toBeVisible();
+    await expect(pill).toContainText(/OFFLINE|오프라인/);
+
+    // 복구되면 다시 사라진다.
+    await context.setOffline(false);
+    await expect(pill).toBeHidden();
+  });
 });
 
 test.describe('responsive', () => {

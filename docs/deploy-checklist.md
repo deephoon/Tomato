@@ -79,7 +79,9 @@ curl -s "$VITE_SUPABASE_URL/auth/v1/settings" -H "apikey: $VITE_SUPABASE_ANON_KE
   진실"이라는 전제로 원격을 동기화한다. 단일 사용자/단일 주 기기에서는 안전하지만,
   서로 다른 기기에서 동시에 작업 목록을 바꾸면 오래된 목록이 다른 기기의 변경을 덮을
   수 있다. 근본 해결은 `updated_at` 비교 / tombstone / 명령형 delete 전환이 필요하다.
-- **오프라인/동기화 상태 표시 없음**: 쓰기 큐는 있으나 사용자에게 동기화 진행/실패가
-  보이지 않는다.
+- **동기화 상태 표시**: 메타바에 OFFLINE / SYNCING / SAVE FAILED 배지가 뜨고, 실패 시
+  클릭하면 재시도한다(`syncStatus.service.js`). 다만 실패한 쓰기를 자동으로 durable하게
+  보관했다가 재생하지는 않으므로, 오프라인 중 새로고침하면 미저장 변경이 사라질 수 있다
+  (재시도는 현재 in-memory 상태를 다시 쓰는 방식).
 - **작업 나누기 = 로컬 휴리스틱**: 실제 LLM 연동 아님. "AI" 라고 광고하지 않는다.
 - **PWA 아님**: 일반 웹앱. Service Worker/manifest 없음.
