@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { dedupeTasksBySignature, normalizeTaskIds } from '../services/taskIdentity.service.js';
+import { dedupeTasksBySignature, normalizeTaskIds, shouldSkipTaskPersist } from '../services/taskIdentity.service.js';
+
+describe('shouldSkipTaskPersist (stale-save guard)', () => {
+  it('blocks an empty-list save before the cloud state has loaded (would wipe remote)', () => {
+    expect(shouldSkipTaskPersist({ isCloudLoaded: false, taskCount: 0 })).toBe(true);
+  });
+
+  it('allows a non-empty save even before cloud load (e.g. legacy migration)', () => {
+    expect(shouldSkipTaskPersist({ isCloudLoaded: false, taskCount: 3 })).toBe(false);
+  });
+
+  it('allows an empty save after cloud load (intentional: user cleared their tasks)', () => {
+    expect(shouldSkipTaskPersist({ isCloudLoaded: true, taskCount: 0 })).toBe(false);
+  });
+
+  it('allows a normal save after cloud load', () => {
+    expect(shouldSkipTaskPersist({ isCloudLoaded: true, taskCount: 5 })).toBe(false);
+  });
+});
 
 describe('task identity helpers', () => {
   it('converts local task ids to UUIDs and updates active session references', () => {

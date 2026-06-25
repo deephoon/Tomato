@@ -62,8 +62,8 @@ export function updateWidget(snapshot) {
   if (taskEl) {
     taskEl.textContent = (!isBreak && title) ? `→ ${title}` : '';
   }
-  // Keep the terminal bracket styling consistent with the static markup.
-  const bracket = (label) => `[ ${label} ]`;
+  // Labels are shown plain (brackets removed per QA feedback).
+  const bracket = (label) => `${label}`;
   if (primary) {
     if (isIdle) primary.textContent = bracket(pipT('btnStart') || 'START');
     else primary.textContent = bracket(running ? (pipT('btnPause') || 'PAUSE') : (pipT('btnResume') || 'RESUME'));
@@ -167,9 +167,9 @@ const WIDGET_HTML = `
 
     <div class="pip-footer">
       <div class="pip-controls">
-        <button class="btn-pip" id="pip-primary">[ PAUSE ]</button>
-        <button class="btn-pip btn-pip-accent" id="pip-complete">[ DONE ]</button>
-        <button class="btn-pip btn-pip-close" id="pip-close" title="Close">[ ✕ ]</button>
+        <button class="btn-pip" id="pip-primary">PAUSE</button>
+        <button class="btn-pip btn-pip-accent" id="pip-complete">DONE</button>
+        <button class="btn-pip btn-pip-close" id="pip-close" title="Close">✕</button>
       </div>
     </div>
   </div>

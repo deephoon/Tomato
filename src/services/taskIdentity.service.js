@@ -23,6 +23,16 @@ export function normalizeTaskIds(tasks, { session = null, createId = generateUui
   return remap;
 }
 
+// Guard against stale-save data loss: task.repository.saveTasks() treats the
+// local list as the source of truth and DELETES every remote row missing from
+// it. If an empty list is saved before the cloud state has loaded (e.g. a save
+// firing during boot), it would wipe ALL of the user's remote tasks. Block
+// exactly that case — empty list + cloud not yet loaded. Non-empty saves and
+// post-load saves (incl. an intentional "delete my last task") still proceed.
+export function shouldSkipTaskPersist({ isCloudLoaded, taskCount } = {}) {
+  return !isCloudLoaded && (taskCount || 0) === 0;
+}
+
 export function dedupeTasksBySignature(tasks) {
   if (!Array.isArray(tasks)) return [];
 

@@ -14,6 +14,9 @@ let symbolParticles;
 
 // State
 let currentMode = 'idle';
+// When a focus/break block is paused, freeze the monolith so the rotation
+// visibly matches the paused timer (QA: 일시정지해도 오각형이 돌던 문제).
+let isScenePaused = false;
 const CFG = {
   gridSpeed: 0.001,
   monolithRotSpeed: 0.0005,
@@ -183,7 +186,7 @@ function animate(currentTime) {
     if (horizonGrid.position.z >= 0) horizonGrid.position.z = -10;
   }
 
-  if (monolithPivot) {
+  if (monolithPivot && !isScenePaused) {
     monolithPivot.rotation.y += CFG.monolithRotSpeed;
     monolithPivot.rotation.z += CFG.monolithRotSpeed * 0.5;
   }
@@ -226,6 +229,12 @@ export function triggerRitualManeuver() {
   gsap.fromTo(pixelPass, { pixelSize: 32 }, { pixelSize: 6, duration: 0.8, ease: 'steps(4)' });
   // Flash wireframe white then back
   gsap.to(monolithWire.material, { opacity: 1, duration: 0.15, yoyo: true, repeat: 5 });
+}
+
+// Freeze/resume the rotating monolith so the 3D background reflects the
+// paused timer state. Driven from updateFocusHUD on every statechange.
+export function setScenePaused(paused) {
+  isScenePaused = !!paused;
 }
 
 export function set3DMode(mode) {

@@ -19,6 +19,7 @@ function load3DScene() {
   }).catch(e => console.error('3D import failed:', e));
 }
 function set3DMode(name) { try { threeScene && threeScene.set3DMode(name); } catch (e) {} }
+function set3DPaused(paused) { try { threeScene && threeScene.setScenePaused(paused); } catch (e) {} }
 function triggerRitualManeuver() { try { threeScene && threeScene.triggerRitualManeuver(); } catch (e) {} }
 import { dict } from './i18n.js';
 import { signUpWithEmail, signInWithEmail, signOut } from './supabase/auth.service.js';
@@ -65,11 +66,11 @@ function updateI18nDOM() {
   });
   const langBtn = document.getElementById('btn-lang-toggle');
   if (langBtn) {
-    langBtn.textContent = appState.prefs.lang === 'ko' ? '[ EN / KR* ]' : '[ EN* / KR ]';
+    langBtn.textContent = appState.prefs.lang === 'ko' ? 'EN / KR*' : 'EN* / KR';
   }
   const authLangBtn = document.getElementById('btn-auth-lang-toggle');
   if (authLangBtn) {
-    authLangBtn.textContent = appState.prefs.lang === 'ko' ? '[ EN / KR* ]' : '[ EN* / KR ]';
+    authLangBtn.textContent = appState.prefs.lang === 'ko' ? 'EN / KR*' : 'EN* / KR';
   }
 }
 
@@ -383,7 +384,7 @@ function updateAuthUI() {
   document.body.classList.toggle('auth-locked', !user);
   if (gate) gate.classList.toggle('hidden', !!user);
   if (badge) {
-    badge.textContent = user ? `[ ${user.displayName || user.email.split('@')[0]} // CLOUD ]` : t('authNoUser');
+    badge.textContent = user ? `${user.displayName || user.email.split('@')[0]} // CLOUD` : t('authNoUser');
     badge.style.display = user ? '' : 'none';
   }
   if (logoutBtn) logoutBtn.style.display = user ? '' : 'none';
@@ -1341,7 +1342,7 @@ async function renderArchiveReview() {
         <span>${t('archiveThisWeek')}: <b>${weekMin}${t('min')}</b></span>
         <span>${t('archiveAverage')}: <b>${avgMin}${t('min')}</b></span>
       </div>
-      <div id="ai-insight-container" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--accent); color: var(--fg); font-family: 'JetBrains Mono', monospace; font-size: 0.85em; white-space: pre-wrap;">[ ANALYZING SIGNAL... ]</div>
+      <div id="ai-insight-container" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--accent); color: var(--fg); font-family: 'JetBrains Mono', monospace; font-size: 0.85em; white-space: pre-wrap;">ANALYZING SIGNAL...</div>
     </div>
     <div class="archive-review-cards">
       <div class="archive-review-card">
@@ -1914,6 +1915,11 @@ function updateFocusHUD() {
     focusScreen: $('view-focus'),
     breakScreen: $('view-break')
   }, appState.session);
+
+  // Freeze the 3D monolith while a timed block is paused so the rotating
+  // pentagon matches the paused timer (QA feedback).
+  const isTimedBlock = mode === 'focus' || mode === 'break';
+  set3DPaused(isTimedBlock && !running && remaining > 0);
 
   // Offer the floating PiP widget whenever a timed block is in progress.
   show($('btn-open-widget'), isPipSupported() && mode === 'focus' && remaining > 0);
