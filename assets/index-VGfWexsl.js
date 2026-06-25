@@ -321,7 +321,7 @@ Signal stability is ${i>80?`OPTIMAL`:`FLUCTUATING`}. Maintain current ritual par
         <span>${J(`archiveThisWeek`)}: <b>${o}${J(`min`)}</b></span>
         <span>${J(`archiveAverage`)}: <b>${s}${J(`min`)}</b></span>
       </div>
-      <div id="ai-insight-container" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--accent); color: var(--fg); font-family: 'JetBrains Mono', monospace; font-size: 0.85em; white-space: pre-wrap;">ANALYZING SIGNAL...</div>
+      <div id="ai-insight-container" style="margin-top: 16px; padding: 12px; border: 1px dashed var(--accent); color: var(--fg); font-family: var(--font-mono); font-size: var(--fs-small); line-height: 1.7; white-space: pre-wrap;">ANALYZING SIGNAL...</div>
     </div>
     <div class="archive-review-cards">
       <div class="archive-review-card">
