@@ -7,6 +7,13 @@ import { getTodayStr } from './utils/dateTime.js';
 import { safeParse } from './utils/safeStorage.js';
 import { normalizeTaskIds, shouldSkipTaskPersist } from './services/taskIdentity.service.js';
 import { trackWrite } from './services/syncStatus.service.js';
+import {
+  readPending,
+  setPendingSnapshot,
+  clearPendingEntity,
+  addPendingHistoryAppend,
+  clearPendingHistoryAppends
+} from './services/pendingWrites.service.js';
 
 let syncedWidgetUser = null;
 
@@ -40,11 +47,12 @@ export async function loadCloudState() {
   if (!user) return;
   
   appState.isCloudLoaded = false;
-  
+
   // Load cached first so UI can paint something immediately if it wants
   appState.session = sessionRepo.getLocalCache(user.id);
   appState.prefs = await prefRepo.getPreferences(user.id);
-  
+
+  let loadOk = false;
   try {
     // Fetch from Supabase
     const [tasks, history, session] = await Promise.all([
@@ -52,19 +60,73 @@ export async function loadCloudState() {
       historyRepo.getHistory(user.id),
       sessionRepo.getSession(user.id) // This will fetch from DB and fallback to cache
     ]);
-    
+
     appState.tasks = tasks;
     appState.history = history;
     appState.session = session;
+    loadOk = true;
   } catch (err) {
     console.error("Cloud sync failed, falling back to local cache:", err);
     // On failure, we should still allow the user to use the app in offline mode.
-    // In a real app, we'd maybe show a warning banner.
   } finally {
+    // Offline-first: overlay any unsynced local edits over what we just loaded
+    // (or over the empty/cached state on failure) so the user always sees their
+    // own most recent work, then push them back to remote when online.
+    applyPendingOverlay(user.id);
     appState.isCloudLoaded = true;
     checkDayRollover();
     window.dispatchEvent(new CustomEvent('tomato:cloud-loaded'));
+    if (loadOk) flushPendingWrites();
   }
+}
+
+// Overlay unsynced local edits (offline-first): pending wins over just-loaded
+// remote, so the user keeps seeing their own most recent work after a reload.
+function applyPendingOverlay(userId) {
+  const pending = readPending(userId);
+  if (pending.tasks) appState.tasks = pending.tasks;
+  if (pending.session) appState.session = { ...appState.session, ...pending.session };
+  if (Array.isArray(pending.historyAppends) && pending.historyAppends.length) {
+    const seen = new Set(appState.history.map(h => h.id));
+    pending.historyAppends.forEach((item) => {
+      if (!seen.has(item.id)) appState.history.push(item);
+    });
+  }
+}
+
+// Replay every queued write to remote. Runs when connectivity returns (online
+// event), after a successful cloud load, and on the manual retry affordance.
+let isFlushing = false;
+export async function flushPendingWrites() {
+  const user = getRuntimeUser();
+  if (!user || isFlushing) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  const pending = readPending(user.id);
+  isFlushing = true;
+  try {
+    if (pending.tasks) {
+      const ok = await trackWrite(taskRepo.saveTasks(user.id, pending.tasks));
+      if (ok !== false) clearPendingEntity(user.id, 'tasks');
+    }
+    if (pending.session) {
+      const ok = await trackWrite(sessionRepo.saveSession(user.id, pending.session));
+      if (ok !== false) clearPendingEntity(user.id, 'session');
+    }
+    if (Array.isArray(pending.historyAppends) && pending.historyAppends.length) {
+      let allOk = true;
+      for (const item of pending.historyAppends) {
+        const ok = await trackWrite(historyRepo.appendHistory(user.id, item));
+        if (ok === false) allOk = false;
+      }
+      if (allOk) clearPendingHistoryAppends(user.id);
+    }
+  } finally {
+    isFlushing = false;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => flushPendingWrites());
 }
 
 export function saveLang() {
@@ -108,14 +170,27 @@ function checkDayRollover() {
 }
 
 // --- Persistence ---
-// These are now fire-and-forget async wrapper functions
+// These are fire-and-forget. Each remote write is tracked (for the sync badge)
+// and, on failure, the payload is persisted to localStorage so it survives a
+// reload and can be replayed once connectivity returns (see pendingWrites).
+
+// Wrap an idempotent full-state save: queue the snapshot on failure, clear it
+// on success.
+function persistedSnapshotWrite(userId, entity, snapshot, run) {
+  trackWrite(run()).then((ok) => {
+    if (ok === false) setPendingSnapshot(userId, entity, snapshot);
+    else clearPendingEntity(userId, entity);
+  });
+}
+
 export function saveTasks() {
   const user = getRuntimeUser();
   if (!user) return;
   // Never let an empty list wipe remote tasks before the cloud state has loaded.
   if (shouldSkipTaskPersist({ isCloudLoaded: appState.isCloudLoaded, taskCount: appState.tasks.length })) return;
   normalizeTaskIds(appState.tasks, { session: appState.session });
-  trackWrite(taskRepo.saveTasks(user.id, appState.tasks));
+  const snapshot = appState.tasks.map(t => ({ ...t }));
+  persistedSnapshotWrite(user.id, 'tasks', snapshot, () => taskRepo.saveTasks(user.id, appState.tasks));
   broadcastSync('tasks', appState.tasks);
 }
 
@@ -123,7 +198,11 @@ export function appendHistoryItem(item) {
   appState.history.push(item);
   const user = getRuntimeUser();
   if (user) {
-    trackWrite(historyRepo.appendHistory(user.id, item));
+    // History append is incremental; queue the item itself (replayed idempotently
+    // via completion_key dedup) instead of a snapshot.
+    trackWrite(historyRepo.appendHistory(user.id, item)).then((ok) => {
+      if (ok === false) addPendingHistoryAppend(user.id, item);
+    });
   }
   broadcastSync('history-append', item);
 }
@@ -172,7 +251,7 @@ export function saveSession() {
     completionKey: appState.session.completionKey || null,
     completedHistoryId: appState.session.completedHistoryId || null
   };
-  trackWrite(sessionRepo.saveSession(user.id, payload));
+  persistedSnapshotWrite(user.id, 'session', payload, () => sessionRepo.saveSession(user.id, payload));
   broadcastSync('session', payload);
 }
 

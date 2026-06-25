@@ -1,4 +1,4 @@
-import { appState, saveTasks, saveHistory, saveSession, getActiveTask, saveLang, updateHistoryReflection, claimLegacyDataForCurrentUser, reloadForCurrentUser } from './state.js';
+import { appState, saveTasks, saveHistory, saveSession, getActiveTask, saveLang, updateHistoryReflection, claimLegacyDataForCurrentUser, reloadForCurrentUser, flushPendingWrites } from './state.js';
 import { getTodayStr, getTodayDisplay } from './utils/dateTime.js';
 import { initSyncService } from './services/sync.service.js';
 import { processQueue } from './services/offlineQueue.service.js';
@@ -176,9 +176,8 @@ function bindSyncStatus() {
   if (el) el.onclick = () => {
     if (!getSyncStatus().actionable) return;
     clearSyncFailure();
-    // Re-issue the primary writes + flush the offline command queue.
-    saveTasks();
-    saveSession();
+    // Replay the durable pending writes + flush the offline command queue.
+    flushPendingWrites();
     processQueue();
   };
   renderSyncStatus();
