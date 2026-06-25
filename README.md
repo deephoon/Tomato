@@ -31,7 +31,7 @@ Tomato는 사용자가 오늘의 집중 블록을 만들고(Plan), 실행하고(
 | Backend / Storage | Supabase (PostgreSQL + Auth + Realtime, RLS 적용) |
 | 위젯 | Document Picture-in-Picture API (브라우저 네이티브) |
 | 교차 탭/창 동기화 | BroadcastChannel |
-| 테스트 | Vitest (jsdom), 66 tests |
+| 테스트 | Vitest (jsdom), 순수 서비스 함수 중심 (`npm test`) |
 | 배포 | GitHub Actions → GitHub Pages |
 
 ---
@@ -48,7 +48,7 @@ Tomato/
 │  ├─ main.js                  # (~2,160줄) 모든 render*/bind* + 뷰 전환. DOM의 단일 소유자
 │  ├─ state.js                 # appState 단일 스토어 + 영속화 + BroadcastChannel 동기화
 │  ├─ timer.js                 # Date.now() 기반 정밀 타이머, 집중 완료 시 history 기록
-│  ├─ i18n.js                  # en/ko 사전 (각 207키, 완전 정합)
+│  ├─ i18n.js                  # en/ko 사전 (양쪽 키 완전 정합)
 │  ├─ three-scene.js           # 3D 모노리스 배경 (three+gsap, 지연 로드 대상)
 │  ├─ style.css                # (~2,630줄) 디자인 토큰 + 전 화면 스타일
 │  │
@@ -89,7 +89,7 @@ Tomato/
 │  │  ├─ runtime.js                  # 런타임 판별 (PiP 지원 등) 단일화
 │  │  └─ safeStorage.js              # 안전한 localStorage 래퍼
 │  │
-│  └─ tests/                   # ── Vitest (jsdom), 순수 서비스 함수 중심 66 tests
+│  └─ tests/                   # ── Vitest (jsdom), 순수 서비스 함수 중심
 │
 ├─ supabase/migrations/        # 001_init_tomato.sql (7 테이블 + RLS 정책)
 ├─ .github/workflows/          # web-deploy.yml (test → build → Pages)
@@ -176,9 +176,9 @@ Tomato/
 * **공개 UI 정리** — JSON 복구 파일 버튼을 아카이브에서 제거하고, 삭제/작업 나누기 문구를 일반 사용자가 이해하기 쉬운 표현으로 변경.
 * **위젯 안정화** — 지연 로드가 깨뜨렸던 PiP 열림(사용자 제스처) 회귀 수정.
 * **PWA 정리** — 등록·링크되지 않던 sw.js/manifest 제거. **현재 빌드는 일반 웹앱**(오프라인/설치형 PWA 미구현).
-* **하네스/CI** — 배포 전 `npm test` 게이트 추가(Node 20), 안전 명령 allowlist 정리, 완료 시 테스트 검증 훅.
+* **하네스/CI** — 배포 전 `npm test` 게이트 추가(Node 24), 안전 명령 allowlist 정리, 완료 시 테스트 검증 훅.
 
-**검증 기준**: `npm run build` 성공 · `npm test` 66/66 통과 · `vite preview`에서 `/`·JS·CSS 200.
+**검증 기준**: `npm run build` 성공 · `npm test` 전체 통과 · `vite preview`에서 `/`·JS·CSS 200.
 
 ---
 

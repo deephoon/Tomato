@@ -1,5 +1,6 @@
 import { appState } from '../state.js';
 import { supabase } from '../supabase/client.js';
+import { savePreferences } from '../repositories/preference.repository.js';
 
 export async function generateArchiveInsight(forceRefresh = false) {
   const user = appState.auth.user;
@@ -36,9 +37,7 @@ export async function generateArchiveInsight(forceRefresh = false) {
     appState.prefs.lastInsightDate = new Date().toDateString();
     appState.prefs.lastInsightReport = report;
     // update preferences (fire and forget)
-    import('../repositories/preference.repository.js').then(m => {
-      m.savePreferences(user.id, appState.prefs);
-    });
+    savePreferences(user.id, appState.prefs);
   }
 
   return report;
