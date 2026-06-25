@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { dict } from '../i18n.js';
 
 const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+const mainJs = readFileSync(join(process.cwd(), 'src/main.js'), 'utf8');
+const css = readFileSync(join(process.cwd(), 'src/style.css'), 'utf8');
 
 describe('public UI surface', () => {
   it('does not expose restore JSON controls in the archive view', () => {
@@ -25,6 +27,20 @@ describe('public UI surface', () => {
     expect(dict.ko.aiSubdivision).toBe('작업 나누기');
     expect(dict.ko.btnAISubdivide).not.toContain('AI');
     expect(JSON.stringify(dict.ko)).not.toContain('영구 폐기');
+  });
+
+  it('uses only the unified pixel font stack (no JetBrains/Inter/Courier)', () => {
+    // The insight block used to set an inline JetBrains Mono font, which broke
+    // the pixel tone-and-manner. All font-family must go through --font-* vars.
+    for (const src of [html, mainJs]) {
+      expect(src).not.toContain('JetBrains');
+      expect(src).not.toContain('Courier');
+    }
+    // Any inline font-family in main.js must reference a pixel font variable.
+    const inlineFonts = mainJs.match(/font-family:\s*[^;"']+/g) || [];
+    inlineFonts.forEach((decl) => expect(decl).toContain('var(--font'));
+    // The CSS only declares JetBrains inside an explanatory comment, never as a value.
+    expect(css).not.toMatch(/font-family:[^;]*JetBrains/);
   });
 
   it('no longer wraps UI labels in [ ] brackets', () => {
