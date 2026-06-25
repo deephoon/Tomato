@@ -58,9 +58,11 @@ curl -s "$VITE_SUPABASE_URL/auth/v1/settings" -H "apikey: $VITE_SUPABASE_ANON_KE
 - [ ] 최신 Actions run 이 success
 - [ ] live URL(`https://deephoon.github.io/Tomato/`)의 HTML 이 최신 해시 asset 참조
 
-## 5. 수동 스모크 (실 브라우저)
+## 5. 스모크 (실 브라우저)
 
-자동 E2E가 아직 없으므로 공개 전 1회는 손으로 확인한다.
+부팅·auth-gate·클라이언트 검증·i18n·390px 반응형은 **Playwright no-auth 티어**
+(`npm run test:e2e`, `.github/workflows/e2e.yml`)가 자동으로 검증한다. 아래는 로그인이
+필요해 아직 수동(또는 auth 티어 + 테스트 계정)으로 확인하는 항목이다.
 
 - [ ] 신규 회원가입 → 메일 확인 → 로그인
 - [ ] 로그인 후 새로고침 시 세션/데이터 복원

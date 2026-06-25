@@ -200,9 +200,20 @@ npm install
 npm run dev      # 개발 서버 (http://localhost:5173/)
 npm run build    # 프로덕션 빌드 → dist/
 npm run preview  # 빌드 결과 미리보기
-npm test         # Vitest 1회 실행
+npm test         # Vitest 1회 실행 (순수 서비스 함수)
 npm run test:watch
+npm run test:e2e # Playwright E2E (실 브라우저 스모크)
 ```
+
+**E2E (Playwright)** — 실 브라우저로 부팅/auth-gate/검증/i18n/반응형을 검사한다.
+처음 한 번은 `npx playwright install chromium`로 브라우저를 받는다.
+
+* **no-auth 티어** (`e2e/smoke.spec.js`) — 로그인 없이 통과. Supabase 시크릿 불필요 → CI 기본.
+* **auth 티어** (`e2e/auth-flow.spec.js`) — **확인 완료된 테스트 계정**이 있을 때만 실행. 없으면 자동 skip.
+  ```bash
+  E2E_EMAIL=you@example.com E2E_PASSWORD='...' npm run test:e2e
+  ```
+* CI: `.github/workflows/e2e.yml`가 push/PR마다 no-auth 티어를 돌린다(배포 워크플로와 분리).
 
 ### 배포
 무료 배포 1순위는 **GitHub Pages + Supabase Free**입니다.
