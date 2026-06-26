@@ -1940,7 +1940,37 @@ function bindTimerEvents() {
 
 function onStateChange() {
   updateFocusHUD();
-  if (currentView === 'home') renderHome();
+  // Per-second tick: only the hero clock changes. Rebuilding the whole home view
+  // (today list, stat grid, streak, recent strip — all innerHTML + re-bind) every
+  // second was the bulk of the timer-running jank. Update just the clock.
+  if (currentView === 'home') updateHomeClock();
+}
+
+// Lightweight per-tick update of the home hero clock. The data lists are rebuilt
+// only by the full renderHome() on navigation / data changes.
+function updateHomeClock() {
+  const mode = appState.session.mode;
+  const running = appState.session.isRunning;
+  const clockVal = $('hero-clock-value');
+  const clockLabel = $('hero-clock-label');
+  const heroCard = document.querySelector('.hero-card');
+  if (clockVal) {
+    const sessionActive = mode === 'focus' || mode === 'break';
+    const task = sessionActive ? (getActiveTask() || pickHomeTask()) : pickHomeTask();
+    const seconds = sessionActive
+      ? appState.session.remainingSeconds
+      : (task ? task.focusMinutes * 60 : 25 * 60);
+    const [mm, ss] = formatTime(seconds).split(':');
+    clockVal.innerHTML = `${mm}<span class="col">:</span>${ss}`;
+    clockVal.classList.remove('clean', 'heavy', 'echo');
+    clockVal.classList.add(running ? 'heavy' : 'echo');
+  }
+  if (clockLabel) {
+    if (running && mode === 'focus') clockLabel.textContent = t('heroRunning');
+    else if (mode === 'focus' && !running) clockLabel.textContent = t('heroPaused');
+    else clockLabel.textContent = t('heroStandby');
+  }
+  if (heroCard) heroCard.classList.toggle('running', running && mode === 'focus');
 }
 
 // ==========================================

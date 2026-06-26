@@ -215,9 +215,9 @@ body[data-view="break"]   { --stage-opacity: 0.55; --scanline-opacity: 0.60; --g
   padding-top: var(--safe-top);
   padding-inline: var(--screen-pad);
   display: flex; align-items: center; justify-content: space-between;
-  background: linear-gradient(180deg, rgba(5,5,5,0.78) 0%, rgba(5,5,5,0.3) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* No backdrop-filter: re-blurring the animating canvas every frame for a fixed
+     strip was wasteful. A slightly more opaque gradient reads the same. */
+  background: linear-gradient(180deg, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.55) 100%);
   z-index: 40; pointer-events: auto;
   border-bottom: 1px solid transparent;
   transition: border-color .3s;
@@ -456,9 +456,8 @@ body.auth-locked #app-overlay {
   height: calc(var(--tabbar-h) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   display: grid; grid-template-columns: repeat(4, 1fr);
-  background: linear-gradient(0deg, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.7) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* No backdrop-filter — opaque enough without re-blurring the canvas. */
+  background: linear-gradient(0deg, rgba(5,5,5,0.97) 0%, rgba(5,5,5,0.85) 100%);
   border-top: 1px solid var(--hairline);
   z-index: 40; pointer-events: auto;
 }
@@ -775,8 +774,9 @@ body.auth-locked #app-overlay {
 }
 .panel {
   border: var(--border-solid);
-  background: rgba(15,15,15,0.62);
-  backdrop-filter: blur(6px);
+  /* No backdrop-filter: these home-screen panels sit over the rotating monolith,
+     so the blur was recomputed every frame. Higher opacity keeps them legible. */
+  background: rgba(15,15,15,0.85);
   padding: var(--s-5);
   position: relative;
 }
@@ -924,8 +924,9 @@ body.auth-locked #app-overlay {
    ============================================ */
 .focus-screen {
   position: fixed !important; inset: 0;
-  background: radial-gradient(1200px 900px at center, rgba(30,0,5,0.82), rgba(0,0,0,0.97));
-  backdrop-filter: blur(3px);
+  /* Background is already near-opaque; the full-viewport backdrop blur cost a lot
+     during focus for no visible gain. */
+  background: radial-gradient(1200px 900px at center, rgba(30,0,5,0.9), rgba(0,0,0,0.98));
   z-index: 45;
   display: grid;
   grid-template-rows: 1fr auto;
@@ -1001,8 +1002,8 @@ body.auth-locked #app-overlay {
 .focus-draft,
 .focus-launch-panel .panel {
   border: var(--border-solid);
-  background: rgba(15,15,15,0.90);
-  backdrop-filter: blur(10px);
+  /* Already 0.90 opaque — backdrop blur added cost without a visible difference. */
+  background: rgba(15,15,15,0.94);
 }
 .focus-draft {
   padding: var(--s-5);
@@ -1811,8 +1812,8 @@ body.auth-locked #app-overlay {
   display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
   padding: var(--s-3);
   border: var(--border-solid);
-  background: rgba(15,15,15,0.85);
-  backdrop-filter: blur(6px);
+  /* Sticky filter bar over the archive list — no canvas-blur needed. */
+  background: rgba(15,15,15,0.94);
   z-index: 2;
 }
 .arch-filters .af-label {
@@ -2339,8 +2340,7 @@ body.widget-mode #view-break {
   background:
     radial-gradient(140% 90% at 50% -20%, var(--hero-red-dim), transparent 55%),
     var(--bg-surface) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Opaque surface — no backdrop blur needed; saves cost in the PiP window. */
   border: 1px solid var(--hairline-2);
   border-radius: 6px;
   box-shadow: 0 18px 40px rgba(0,0,0,0.55);

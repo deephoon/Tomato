@@ -214,8 +214,15 @@ function handleResize() {
   }, 200);
 }
 
+// mousemove fires dozens of times per second; without throttling we spawned a
+// fresh 2s GSAP tween on every event, churning allocations and jank. Throttle to
+// ~10Hz — the 2s ease makes the lower sample rate imperceptible.
+let lastMouseTween = 0;
 function onMouseMove(e) {
   if (currentMode === 'focus') return;
+  const now = performance.now();
+  if (now - lastMouseTween < 100) return;
+  lastMouseTween = now;
   const x = (e.clientX / window.innerWidth) * 2 - 1;
   const y = -(e.clientY / window.innerHeight) * 2 + 1;
   gsap.to(camera.position, { x: x * 0.5, y: y * 0.5, duration: 2, ease: 'power2.out' });
