@@ -209,6 +209,7 @@ function init() {
 
   updateI18nDOM();
   updateAuthUI();
+  handleAuthRedirectError();
   renderAll();
 
   // Resume ticking if a session was already running (page reload).
@@ -216,6 +217,29 @@ function init() {
   updateFocusHUD();
 
   showView('home');
+}
+
+// Supabase appends auth outcomes to the URL hash. On a failed email link
+// (expired/invalid) it lands here as `#error=...&error_code=...`. Without this
+// the app silently ignored it; surface a readable message and clean the URL.
+function handleAuthRedirectError() {
+  const hash = window.location.hash || '';
+  if (!hash.includes('error')) return;
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  const errorCode = params.get('error_code') || params.get('error');
+  if (!errorCode) return;
+
+  const messageKey = errorCode === 'otp_expired'
+    ? 'authErrorLinkExpired'
+    : 'authErrorLinkInvalid';
+  const message = $('auth-message');
+  if (message) {
+    message.textContent = t(messageKey);
+    message.classList.remove('ok');
+    message.classList.add('error');
+  }
+  // Strip the error hash so a refresh doesn't re-show it.
+  history.replaceState(null, '', window.location.pathname + window.location.search);
 }
 
 function bindWidgetControls() {
